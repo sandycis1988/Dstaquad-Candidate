@@ -2,6 +2,7 @@ package com.profile.candidate.service;
 
 import com.profile.candidate.dto.CandidateResponseDto;
 import com.profile.candidate.exceptions.CandidateAlreadyExistsException;
+import com.profile.candidate.exceptions.CandidateNotFoundException;
 import com.profile.candidate.model.CandidateDetails;
 import com.profile.candidate.repository.CandidateRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -69,16 +70,20 @@ public class CandidateService {
             throw new CandidateAlreadyExistsException("Candidate with the same contact number already exists: " + existingContactNumber.get().getContactNumber());
         }
     }
-    public List<CandidateResponseDto> getSubmissions() {
+    public List<CandidateDetails> getSubmissions() {
         // Retrieve all candidates from the repository
-        List<CandidateDetails> candidates = candidateRepository.findAll();
-
-        // Convert the candidates to a list of CandidateResponseDto objects
-        return candidates.stream().map(candidate -> new CandidateResponseDto(
-                "Candidate retrieved successfully.",
-                candidate.getCandidateId(),
-                candidate.getUserId() != null ? candidate.getUserId() : "Not assigned",
-                candidate.getJobId() != null ? candidate.getJobId() : "Not assigned"
-        )).collect(Collectors.toList());
+        return candidateRepository.findAll();
     }
+
+    public List<CandidateDetails> getSubmissionsByUserId(String userId) {
+        // Retrieve candidates by userId
+        List<CandidateDetails> candidates = candidateRepository.findByUserId(userId);
+
+        if (candidates.isEmpty()) {
+            throw new CandidateNotFoundException("No submissions found for userId: " + userId);
+        }
+
+        return candidates;
+    }
+
 }

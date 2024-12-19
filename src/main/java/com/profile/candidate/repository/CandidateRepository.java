@@ -28,4 +28,6 @@ public interface CandidateRepository extends JpaRepository<CandidateDetails, Str
     List<CandidateDetails> findByNoticePeriod(String noticePeriod);
 
     Optional<CandidateDetails> findByFullNameAndEmailIdAndContactNumber(String fullName, String emailId, String contactNumber);
+
+    List<CandidateDetails> findByUserId(String userId);
 }
