@@ -14,7 +14,7 @@ public class CandidateDetails {
 
     @Id
     @Column(unique = true, nullable = false)
-    private String candidateId;  // Manually set candidate ID
+    private String candidateId;
 
     @Column(unique = true, nullable = false)
     @NotBlank(message = "Job ID is required")

@@ -71,18 +71,27 @@ public class CandidateController {
         }
     }
     // Endpoint to fetch all submitted candidates
-    @GetMapping("/submissions")
-    public ResponseEntity<List<CandidateResponseDto>> getSubmissions() {
+    @GetMapping("/submissions/{userId}")
+    public ResponseEntity<List<CandidateDetails>> getAllSubmissions(
+            @PathVariable String userId) {  // Use PathVariable to get the userId from the URL
         try {
-            // Fetch submissions from the service
-            List<CandidateResponseDto> submissions = candidateService.getSubmissions();
+            // Fetch all submissions based on the userId
+            List<CandidateDetails> submissions = candidateService.getSubmissionsByUserId(userId);
 
             // Log success
-            logger.info("Fetched {} submissions successfully.", submissions.size());
-            return ResponseEntity.ok(submissions); // Return HTTP 200 OK with data
+            logger.info("Fetched {} submissions successfully for userId: {}", submissions.size(), userId);
+
+            // Return all candidate details with status 200 OK
+            return ResponseEntity.ok(submissions);
+
+        } catch (CandidateNotFoundException ex) {
+            // Handle specific CandidateNotFoundException
+            logger.error("No submissions found for userId: {}", userId);
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+
         } catch (Exception ex) {
             // Log the error and return HTTP 500
-            logger.error("An error occurred while fetching submissions: {}", ex.getMessage());
+            logger.error("An error occurred while fetching submissions: {}", ex.getMessage(), ex);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
