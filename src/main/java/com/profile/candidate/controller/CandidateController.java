@@ -1,5 +1,7 @@
 package com.profile.candidate.controller;
 
+import com.profile.candidate.dto.CandidateDto;
+import com.profile.candidate.dto.CandidateGetResponseDto;
 import com.profile.candidate.dto.CandidateResponseDto;
 import com.profile.candidate.exceptions.CandidateAlreadyExistsException;
 import com.profile.candidate.exceptions.CandidateNotFoundException;
@@ -27,13 +29,13 @@ public class CandidateController {
 
     // Endpoint to submit candidate profile (Create new candidate)
     @PostMapping("/submit")
-    public ResponseEntity<CandidateResponseDto> submitCandidate(@RequestBody CandidateDetails candidateDetails) {
+    public ResponseEntity<CandidateResponseDto> submitCandidate(@RequestBody CandidateDto candidateDto) {
         try {
             // Service method to create or submit the candidate
-            CandidateResponseDto response = candidateService.submitCandidate(candidateDetails);
+            CandidateResponseDto response = candidateService.submitCandidate(candidateDto);
 
             // Log the success of candidate submission
-            logger.info("Candidate successfully submitted: {}", candidateDetails.getFullName());
+            logger.info("Candidate successfully submitted: {}", candidateDto.getFullName());
             return new ResponseEntity<>(response, HttpStatus.OK);  // Use CREATED status for successful creation
 
         } catch (CandidateAlreadyExistsException ex) {
@@ -72,11 +74,11 @@ public class CandidateController {
     }
     // Endpoint to fetch all submitted candidates
     @GetMapping("/submissions/{userId}")
-    public ResponseEntity<List<CandidateDetails>> getAllSubmissions(
+    public ResponseEntity<List<CandidateGetResponseDto>> getAllSubmissions(
             @PathVariable String userId) {  // Use PathVariable to get the userId from the URL
         try {
             // Fetch all submissions based on the userId
-            List<CandidateDetails> submissions = candidateService.getSubmissionsByUserId(userId);
+            List<CandidateGetResponseDto> submissions = candidateService.getSubmissionsByUserId(userId);
 
             // Log success
             logger.info("Fetched {} submissions successfully for userId: {}", submissions.size(), userId);
