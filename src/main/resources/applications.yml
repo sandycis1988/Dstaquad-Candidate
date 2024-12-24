@@ -1,0 +1,49 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: CANDIDATES
+  cloud:
+    loadbalancer:
+      retry:
+        enabled: true
+      cache:
+        enabled: true
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: mailto:sasaank9110@gmail.com
+    password: trjfaxetolbzxnhu
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/  # Eureka server URL
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${random.value}  # Unique instance ID for the service
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"  # Expose all management endpoints (e.g., health, metrics)
+  endpoint:
+    health:
+      show-details: always  # Always show health check details (useful for debugging)
+
+logging:
+  level:
+    root: INFO  # Root logging level
+    org.springframework: INFO  # Logging level for Spring-related logs
+    org.hibernate.SQL: DEBUG  # SQL query logs (useful for debugging DB interactions)
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE  # Trace SQL binding (useful for SQL parameter debugging)
+    io.mymobile.user: DEBUG  # Custom logging level for a specific package or service (adjust as needed)

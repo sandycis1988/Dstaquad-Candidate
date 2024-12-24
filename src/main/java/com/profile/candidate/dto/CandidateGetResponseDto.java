@@ -10,7 +10,7 @@ public class CandidateGetResponseDto {
     private String jobId;
     private String userId;
     private String fullName;
-    private String emailId;
+    private String candidateEmailId;
     private String contactNumber;
     private String currentOrganization;
     private String qualification;
@@ -21,10 +21,14 @@ public class CandidateGetResponseDto {
     private String noticePeriod;
     private String currentLocation;
     private String preferredLocation;
+
+
+
     private List<String> skills;
     private String communicationSkills;
     private Double requiredTechnologiesRating;
     private String overallFeedback;
+    private String userEmail;
 
     // Constructor that takes a CandidateDetails object
     public CandidateGetResponseDto(CandidateDetails candidate) {
@@ -32,7 +36,7 @@ public class CandidateGetResponseDto {
         this.jobId = candidate.getJobId();
         this.userId = candidate.getUserId();
         this.fullName = candidate.getFullName();
-        this.emailId = candidate.getEmailId();
+        this.candidateEmailId = candidate.getCandidateEmailId();
         this.contactNumber = candidate.getContactNumber();
         this.currentOrganization = candidate.getCurrentOrganization();
         this.qualification = candidate.getQualification();
@@ -47,6 +51,7 @@ public class CandidateGetResponseDto {
         this.communicationSkills = candidate.getCommunicationSkills();
         this.requiredTechnologiesRating = candidate.getRequiredTechnologiesRating();
         this.overallFeedback = candidate.getOverallFeedback();
+        this.userEmail = candidate.getUserEmail();
     }
 
     // Getters and Setters
@@ -82,12 +87,12 @@ public class CandidateGetResponseDto {
         this.fullName = fullName;
     }
 
-    public String getEmailId() {
-        return emailId;
+    public String getCandidateEmailId() {
+        return candidateEmailId;
     }
 
-    public void setEmailId(String emailId) {
-        this.emailId = emailId;
+    public void setCandidateEmailId(String candidateEmailId) {
+        this.candidateEmailId = candidateEmailId;
     }
 
     public String getContactNumber() {
@@ -200,5 +205,13 @@ public class CandidateGetResponseDto {
 
     public void setOverallFeedback(String overallFeedback) {
         this.overallFeedback = overallFeedback;
+    }
+
+    public String getUserEmail() {
+        return userEmail;
+    }
+
+    public void setUserEmail(String userEmail) {
+        this.userEmail = userEmail;
     }
 }

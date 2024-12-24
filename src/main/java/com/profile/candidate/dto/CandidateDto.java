@@ -1,5 +1,7 @@
 package com.profile.candidate.dto;
 import javax.validation.constraints.*;
+
+
 import java.util.List;
 public class CandidateDto {
 
@@ -31,7 +33,7 @@ public class CandidateDto {
 
     @NotBlank(message = "Email ID is required")
     @Email(message = "Invalid email format")
-    private String emailId;
+    private String candidateEmailId;
 
     @NotBlank(message = "Contact number is required")
     @Pattern(regexp = "^[0-9]{10}$", message = "Contact number must be exactly 10 digits and numeric")
@@ -113,12 +115,12 @@ public class CandidateDto {
         this.fullName = fullName;
     }
 
-    public String getEmailId() {
-        return emailId;
+    public String getCandidateEmailId() {
+        return candidateEmailId;
     }
 
-    public void setEmailId(String emailId) {
-        this.emailId = emailId;
+    public void setCandidateEmailId(String candidateEmailId) {
+        this.candidateEmailId = candidateEmailId;
     }
 
     public String getContactNumber() {
