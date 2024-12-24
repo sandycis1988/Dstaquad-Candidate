@@ -1,8 +1,6 @@
 package com.profile.candidate.controller;
 
-import com.profile.candidate.dto.CandidateDto;
-import com.profile.candidate.dto.CandidateGetResponseDto;
-import com.profile.candidate.dto.CandidateResponseDto;
+import com.profile.candidate.dto.*;
 import com.profile.candidate.exceptions.CandidateAlreadyExistsException;
 import com.profile.candidate.exceptions.CandidateNotFoundException;
 import com.profile.candidate.model.CandidateDetails;
@@ -14,7 +12,9 @@ import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @CrossOrigin(origins = "http://192.168.0.139:3000")  // Specific to this controller
 
@@ -29,13 +29,13 @@ public class CandidateController {
 
     // Endpoint to submit candidate profile (Create new candidate)
     @PostMapping("/submit")
-    public ResponseEntity<CandidateResponseDto> submitCandidate(@RequestBody CandidateDto candidateDto) {
+    public ResponseEntity<CandidateResponseDto> submitCandidate(@RequestBody CandidateDetails candidateDetails) {
         try {
             // Service method to create or submit the candidate
-            CandidateResponseDto response = candidateService.submitCandidate(candidateDto);
+            CandidateResponseDto response = candidateService.submitCandidate(candidateDetails);
 
             // Log the success of candidate submission
-            logger.info("Candidate successfully submitted: {}", candidateDto.getFullName());
+            logger.info("Candidate successfully submitted: {}", candidateDetails.getFullName());
             return new ResponseEntity<>(response, HttpStatus.OK);  // Use CREATED status for successful creation
 
         } catch (CandidateAlreadyExistsException ex) {
@@ -97,4 +97,64 @@ public class CandidateController {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @PostMapping("/interview-schedule/{userId}")
+    public ResponseEntity<InterviewResponseDto> scheduleInterview(
+            @PathVariable String userId,
+            @RequestBody InterviewDto interviewRequest) {
+        try {
+            // Make sure you pass the userEmail and clientEmail
+            InterviewResponseDto response = candidateService.scheduleInterview(
+                    userId,
+                    interviewRequest.getInterviewDateTime(),
+                    interviewRequest.getDuration(),
+                    interviewRequest.getZoomLink(),
+                    interviewRequest.getUserEmail(), // Pass userEmail
+                    interviewRequest.getClientEmail() // Pass clientEmail
+            );
+
+            // Return the response with status 200 OK
+            return ResponseEntity.ok(response);
+
+        } catch (CandidateNotFoundException ex) {
+            // If candidate is not found, return a 404 Not Found status with the error message
+            InterviewResponseDto errorResponse = new InterviewResponseDto(
+                    false,
+                    ex.getMessage(),
+                    null, // No payload if error
+                    null // No errors if specific exception
+            );
+            return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+        } catch (Exception ex) {
+            // Handle general exceptions
+            InterviewResponseDto errorResponse = new InterviewResponseDto(
+                    false,
+                    "An error occurred while scheduling the interview.",
+                    null, // No payload if error
+                    null // No errors if general exception
+            );
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/interviews/{userId}")
+    public ResponseEntity<List<GetInterviewResponseDto>> getAllScheduledInterviews(
+            @PathVariable String userId) {
+        try {
+            // Fetch all scheduled interviews for the given userId
+            List<GetInterviewResponseDto> interviewDetails = candidateService.getAllScheduledInterviews(userId);
+
+            // Return response with status 200 OK and the interview details
+            return ResponseEntity.ok(interviewDetails);
+
+        } catch (CandidateNotFoundException ex) {
+            // If no interviews are found for the given userId
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+
+        } catch (Exception ex) {
+            // If any other error occurs
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 }
