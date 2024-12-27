@@ -1,7 +1,6 @@
 package com.profile.candidate.dto;
 
 import com.profile.candidate.model.CandidateDetails;
-
 import java.time.LocalDateTime;
 
 public class InterviewDto {
@@ -13,7 +12,30 @@ public class InterviewDto {
     private String userId;
     private String jobId;
     private String clientName;
-    private CandidateDetails candidateDetails;  // Use CandidateDetails object instead of individual fields
+    private String candidateId;
+    private String fullName;
+
+    public String getContactNumber() {
+        return contactNumber;
+    }
+
+    public void setContactNumber(String contactNumber) {
+        this.contactNumber = contactNumber;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public void setCandidateId(String candidateId) {
+        this.candidateId = candidateId;
+    }
+
+    private String contactNumber;// Use CandidateDetails object instead of individual fields
     private String userEmail;
     private String interviewLevel;
     private String clientEmail;
@@ -28,29 +50,7 @@ public class InterviewDto {
     }
 
     // Getters and Setters
-    public CandidateDetails getCandidateDetails() {
-        return candidateDetails;
-    }
 
-    public void setCandidateDetails(CandidateDetails candidateDetails) {
-        this.candidateDetails = candidateDetails;
-    }
-
-    public String getCandidateId() {
-        return candidateDetails != null ? candidateDetails.getCandidateId() : null;
-    }
-
-    public String getCandidateFullName() {
-        return candidateDetails != null ? candidateDetails.getFullName() : null;
-    }
-
-    public String getCandidateContactNo() {
-        return candidateDetails != null ? candidateDetails.getContactNumber() : null;
-    }
-
-    public String getCandidateEmail() {
-        return candidateDetails != null ? candidateDetails.getEmailId() : null;
-    }
 
     public LocalDateTime getInterviewDateTime() {
         return interviewDateTime;
@@ -133,8 +133,10 @@ public class InterviewDto {
                 ", scheduledTimeStamp=" + scheduledTimeStamp +
                 ", userId='" + userId + '\'' +
                 ", jobId='" + jobId + '\'' +
+                ", candidateId='" + candidateId + '\'' +
+                ", fullName='" + fullName + '\'' +
+                ", contactNumber='" + contactNumber + '\'' +
                 ", clientName='" + clientName + '\'' +
-                ", candidateDetails=" + candidateDetails +
                 ", userEmail='" + userEmail + '\'' +
                 ", interviewLevel='" + interviewLevel + '\'' +
                 '}';
@@ -142,5 +144,9 @@ public class InterviewDto {
 
     public String getClientEmail() {
         return clientEmail;
+    }
+
+    public String getCandidateId() {
+        return candidateId;
     }
 }

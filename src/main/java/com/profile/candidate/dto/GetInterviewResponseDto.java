@@ -8,7 +8,7 @@ public class GetInterviewResponseDto {
     private String candidateId;             // Candidate ID
     private String candidateFullName;       // Candidate Full Name
     private String candidateContactNo;      // Candidate Contact Number
-    private String emailId;                 // Candidate Email ID
+    private String candidateEmailId;                 // Candidate Email ID
     private String userEmail;               // User's Email
     private String userId;                  // User ID (interviewer)
     private LocalDateTime interviewDateTime; // Interview Date & Time
@@ -29,7 +29,7 @@ public class GetInterviewResponseDto {
         this.candidateId = candidateId;
         this.candidateFullName = candidateFullName;
         this.candidateContactNo = candidateContactNo;
-        this.emailId = emailId;
+        this.candidateEmailId = emailId;
         this.userEmail = userEmail;
         this.userId = userId;
         this.interviewDateTime = interviewDateTime;
@@ -74,12 +74,12 @@ public class GetInterviewResponseDto {
         this.candidateContactNo = candidateContactNo;
     }
 
-    public String getEmailId() {
-        return emailId;
+    public String getCandidateEmailId() {
+        return candidateEmailId;
     }
 
-    public void setEmailId(String emailId) {
-        this.emailId = emailId;
+    public void setCandidateEmailId(String candidateEmailId) {
+        this.candidateEmailId = candidateEmailId;
     }
 
     public String getUserEmail() {
@@ -161,7 +161,7 @@ public class GetInterviewResponseDto {
                 ", candidateId='" + candidateId + '\'' +
                 ", candidateFullName='" + candidateFullName + '\'' +
                 ", candidateContactNo='" + candidateContactNo + '\'' +
-                ", emailId='" + emailId + '\'' +
+                ", emailId='" + candidateEmailId + '\'' +
                 ", userEmail='" + userEmail + '\'' +
                 ", userId='" + userId + '\'' +
                 ", interviewDateTime=" + interviewDateTime +

@@ -16,7 +16,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@CrossOrigin(origins = "http://192.168.0.139:3000")  // Specific to this controller
 
 @RestController
 @RequestMapping("/candidate")
@@ -103,39 +102,66 @@ public class CandidateController {
             @PathVariable String userId,
             @RequestBody InterviewDto interviewRequest) {
         try {
-            // Make sure you pass the userEmail and clientEmail
+            // Log the incoming interview request
+            logger.info("Received interview request for userId: {} with candidateId: {}", userId, interviewRequest.getCandidateId());
+
+            // Ensure the candidateId is not null
+            if (interviewRequest.getCandidateId() == null) {
+                return ResponseEntity.badRequest().body(new InterviewResponseDto(
+                        false,
+                        "Candidate ID cannot be null for userId: " + userId,
+                        null,
+                        null
+                ));
+            }
+
+            // Check if the candidate belongs to the user
+            boolean isValidCandidate = candidateService.isCandidateValidForUser(userId, interviewRequest.getCandidateId());
+            if (!isValidCandidate) {
+                // If the candidateId does not belong to the userId, return a 403 Forbidden response
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new InterviewResponseDto(
+                        false,
+                        "Candidate ID does not belong to the provided userId.",
+                        null,
+                        null
+                ));
+            }
+
+            // Proceed with scheduling the interview if the validation passes
             InterviewResponseDto response = candidateService.scheduleInterview(
                     userId,
+                    interviewRequest.getCandidateId(),
                     interviewRequest.getInterviewDateTime(),
                     interviewRequest.getDuration(),
                     interviewRequest.getZoomLink(),
                     interviewRequest.getUserEmail(), // Pass userEmail
-                    interviewRequest.getClientEmail() // Pass clientEmail
+                    interviewRequest.getClientEmail(),
+                    interviewRequest.getClientName(),
+                    interviewRequest.getInterviewLevel() // Pass clientEmail
             );
 
-            // Return the response with status 200 OK
             return ResponseEntity.ok(response);
-
-        } catch (CandidateNotFoundException ex) {
-            // If candidate is not found, return a 404 Not Found status with the error message
-            InterviewResponseDto errorResponse = new InterviewResponseDto(
+        } catch (CandidateNotFoundException e) {
+            // If the candidate is not found
+            logger.error("Candidate not found for userId: {}", userId);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new InterviewResponseDto(
                     false,
-                    ex.getMessage(),
-                    null, // No payload if error
-                    null // No errors if specific exception
-            );
-            return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
-        } catch (Exception ex) {
-            // Handle general exceptions
-            InterviewResponseDto errorResponse = new InterviewResponseDto(
+                    "Candidate not found.",
+                    null,
+                    null
+            ));
+        } catch (Exception e) {
+            // Log unexpected errors and return 500
+            logger.error("Error while scheduling interview: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new InterviewResponseDto(
                     false,
                     "An error occurred while scheduling the interview.",
-                    null, // No payload if error
-                    null // No errors if general exception
-            );
-            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+                    null,
+                    null
+            ));
         }
     }
+
 
     @GetMapping("/interviews/{userId}")
     public ResponseEntity<List<GetInterviewResponseDto>> getAllScheduledInterviews(

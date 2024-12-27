@@ -23,6 +23,9 @@ public class CandidateService {
     @Autowired
     private CandidateRepository candidateRepository;
 
+    @Autowired
+    private InterviewEmailService emailService;
+
     // Method to submit a candidate profile
     public CandidateResponseDto submitCandidate(CandidateDetails candidateDetails) {
         // Validate input fields
@@ -52,7 +55,7 @@ public class CandidateService {
             throw new CandidateAlreadyExistsException("Full Name is required and cannot be empty.");
         }
 
-        if (candidateDetails.getEmailId() == null || !candidateDetails.getEmailId().matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+        if (candidateDetails.getCandidateEmailId() == null || !candidateDetails.getCandidateEmailId().matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
             throw new CandidateAlreadyExistsException("Invalid email format.");
         }
 
@@ -66,15 +69,11 @@ public class CandidateService {
     // Check for duplicate candidate based on Full Name, Email ID, and Contact Number
     private void checkForDuplicates(CandidateDetails candidateDetails) {
         // Check for duplicate Full Name
-        Optional<CandidateDetails> existingFullName = candidateRepository.findByFullName(candidateDetails.getFullName());
-        if (existingFullName.isPresent()) {
-            throw new CandidateAlreadyExistsException("Candidate with the same full name already exists: " + existingFullName.get().getFullName());
-        }
 
         // Check for duplicate Email ID
-        Optional<CandidateDetails> existingEmailId = candidateRepository.findByEmailId(candidateDetails.getEmailId());
+        Optional<CandidateDetails> existingEmailId = candidateRepository.findByCandidateEmailId(candidateDetails.getCandidateEmailId());
         if (existingEmailId.isPresent()) {
-            throw new CandidateAlreadyExistsException("Candidate with the same email ID already exists: " + existingEmailId.get().getEmailId());
+            throw new CandidateAlreadyExistsException("Candidate with the same email ID already exists: " + existingEmailId.get().getCandidateEmailId());
         }
 
         // Check for duplicate Contact Number
@@ -120,27 +119,54 @@ public class CandidateService {
         return candidateDtos;
     }
 
-    // Method to schedule an interview for a candidate
+    public boolean isCandidateValidForUser(String userId, String candidateId) {
+        // Fetch the candidate by candidateId
+        CandidateDetails candidateDetails = candidateRepository.findById(candidateId)
+                .orElseThrow(() -> new CandidateNotFoundException("Candidate not found"));
 
-    public InterviewResponseDto scheduleInterview(String userId, LocalDateTime interviewDateTime, Integer duration,
-                                                  String zoomLink, String userEmail, String clientEmail) {
-        // Find candidates by userId (returns a List)
-        List<CandidateDetails> candidates = candidateRepository.findByUserId(userId);
-
-        // Check if the list is empty
-        if (candidates.isEmpty()) {
-            throw new CandidateNotFoundException("Candidate not found for userId: " + userId);
+        // Check if the userId associated with the candidate matches the provided userId
+        if (!candidateDetails.getUserId().equals(userId)) {
+            return false; // Candidate does not belong to the provided userId
         }
 
-        // Assuming you're working with the first candidate in the list
-        CandidateDetails candidate = candidates.get(0);
+        return true; // Candidate is valid for the user
+    }
+
+    // Method to schedule an interview for a candidate
+
+    public InterviewResponseDto scheduleInterview(String userId, String candidateId, LocalDateTime interviewDateTime, Integer duration,
+                                                  String zoomLink, String userEmail, String clientEmail,
+                                                  String clientName, String interviewLevel) {
+
+        System.out.println("Starting to schedule interview for userId: " + userId + " and candidateId: " + candidateId);
+
+        // Validate if candidateId is null
+        if (candidateId == null) {
+            System.err.println("Candidate ID cannot be null for userId: " + userId);
+            throw new CandidateNotFoundException("Candidate ID cannot be null for userId: " + userId);
+        }
+
+        System.out.println("Candidate ID passed: " + candidateId);
+
+
+        // Find candidate by userId and candidateId
+        Optional<CandidateDetails> optionalCandidate = candidateRepository.findByCandidateIdAndUserId(candidateId, userId);
+
+        if (optionalCandidate.isEmpty()) {
+            System.err.println("No candidate found for userId: " + userId + " and candidateId: " + candidateId);
+            throw new CandidateNotFoundException("Candidate not found for userId: " + userId + " and candidateId: " + candidateId);
+        }
+
+        CandidateDetails candidate = optionalCandidate.get();
+
+        System.out.println("Found candidate: " + candidate);
 
         // Set userEmail and clientEmail from interview request if provided
         if (userEmail != null && !userEmail.isEmpty()) {
-            candidate.setUserEmail(userEmail); // Set the userEmail passed from the interview DTO
+            candidate.setUserEmail(userEmail);
         }
         if (clientEmail != null && !clientEmail.isEmpty()) {
-            candidate.setClientEmail(clientEmail); // Set the clientEmail passed from the interview DTO
+            candidate.setClientEmail(clientEmail);
         }
 
         // Ensure userEmail and clientEmail are set (default them if missing)
@@ -152,23 +178,62 @@ public class CandidateService {
         candidate.setTimestamp(LocalDateTime.now());
         candidate.setZoomLink(zoomLink);
 
+        // Set the new fields (clientName and interviewLevel)
+        if (clientName != null && !clientName.isEmpty()) {
+            candidate.setClientName(clientName);
+        }
+        if (interviewLevel != null && !interviewLevel.isEmpty()) {
+            candidate.setInterviewLevel(interviewLevel);
+        }
+
         // Save the updated candidate details to the database
-        candidateRepository.save(candidate);
+        try {
+            candidateRepository.save(candidate);
+            System.out.println("Candidate saved successfully.");
+        } catch (Exception e) {
+            System.err.println("Error while saving candidate: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Error while saving candidate data.");
+        }
+
+        // Create the email subject and body
+        String subject = "Interview Scheduled for " + candidate.getFullName();
+        String body = "<p>Dear " + candidate.getFullName() + ",</p>"
+                + "<p>We are pleased to inform you that your interview has been scheduled on <b>" + interviewDateTime + "</b>.</p>"
+                + "<p>Please find the details of your interview below:</p>"
+                + "<ul>"
+                + "<li><b>Zoom Link:</b> <a href='" + zoomLink + "'>Join the Interview</a></li>"
+                + "<li><b>Duration:</b> " + duration + " minutes</li>"
+                + "<li><b>Client:</b> " + clientName + "</li>"
+                + "<li><b>Interview Level:</b> " + interviewLevel + "</li>"
+                + "</ul>"
+                + "<p>We look forward to your participation. Please let us know if you have any questions or need further assistance.</p>"
+                + "<p>Best regards,</p>"
+                + "<p>The Interview Team</p>";
+
+        System.out.println("Subject: " + subject);
+        System.out.println("Body: " + body);
+
+        // Send email to Candidate, Client, and User
+        emailService.sendInterviewNotification(candidate.getCandidateEmailId(), subject, body);
+        emailService.sendInterviewNotification(candidate.getClientEmail(), subject, body);
+        emailService.sendInterviewNotification(candidate.getUserEmail(), subject, body);
 
         // Create the payload for the response
         InterviewResponseDto.InterviewPayload payload = new InterviewResponseDto.InterviewPayload(
                 candidate.getCandidateId(),
                 candidate.getUserEmail(),
-                candidate.getEmailId(),
+                candidate.getCandidateEmailId(),
                 candidate.getClientEmail()
         );
 
         // Return response DTO with success = true
         return new InterviewResponseDto(true,
-                "Interview scheduled successfully.",
+                "Interview scheduled successfully and email notifications sent.",
                 payload,
                 null);  // No errors
     }
+
     public List<GetInterviewResponseDto> getAllScheduledInterviews(String userId) {
         // Assume you fetch interview records from your repository
         List<CandidateDetails> candidates = candidateRepository.findByUserId(userId);
@@ -183,7 +248,7 @@ public class CandidateService {
                     interview.getCandidateId(),
                     interview.getFullName(),
                     interview.getContactNumber(),
-                    interview.getEmailId(),
+                    interview.getCandidateEmailId(),
                     interview.getUserEmail(),
                     interview.getUserId(),
                     interview.getInterviewDateTime(),

@@ -1,13 +1,12 @@
 package com.profile.candidate.model;
 
 import jakarta.persistence.*;
-
 import javax.validation.constraints.*;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
-import java.util.UUID;
 
 @Entity
 @Table(name = "candidates")
@@ -19,19 +18,19 @@ public class CandidateDetails {
 
     @Column(nullable = false)
     @NotBlank(message = "Job ID is required")
-    private String jobId;
+    private String jobId;  // No unique constraint on jobId
 
-    // New field userEmail
     @Column(name = "user_email")
     private String userEmail;
 
-    // New field clientEmail
     @Column(name = "client_email")
     private String clientEmail;
 
-    @Column(unique = true, nullable = false)
+
+    @Column(nullable = false)  // Ensures userId is unique
     @NotBlank(message = "User ID is required")
     private String userId;
+
 
     @NotBlank(message = "Full name is required")
     @Size(max = 100, message = "Full name must not exceed 100 characters")
@@ -39,7 +38,7 @@ public class CandidateDetails {
 
     @NotBlank(message = "Email ID is required")
     @Email(message = "Invalid email format")
-    private String emailId;
+    private String candidateEmailId;
 
     @NotBlank(message = "Contact number is required")
     @Pattern(regexp = "^[0-9]{10}$", message = "Contact number must be exactly 10 digits and numeric")
@@ -109,6 +108,7 @@ public class CandidateDetails {
     // New field profileReceivedDate
     @Column(nullable = false)
     private LocalDate profileReceivedDate;
+
 
     @PrePersist
     public void prePersist() {
@@ -187,12 +187,12 @@ public class CandidateDetails {
         this.fullName = fullName;
     }
 
-    public String getEmailId() {
-        return emailId;
+    public String getCandidateEmailId() {
+        return candidateEmailId;
     }
 
-    public void setEmailId(String emailId) {
-        this.emailId = emailId;
+    public void setCandidateEmailId(String candidateEmailId) {
+        this.candidateEmailId = candidateEmailId;
     }
 
     public String getContactNumber() {
