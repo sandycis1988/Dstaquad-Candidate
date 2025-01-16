@@ -10,25 +10,26 @@ public class CandidateGetResponseDto {
     private String jobId;
     private String userId;
     private String fullName;
-    private String candidateEmailId;
+    private String emailId;
     private String contactNumber;
     private String currentOrganization;
     private String qualification;
-    private Integer totalExperience;
-    private String relevantExperience;
+    private float totalExperience;
+    private float relevantExperience;
     private Double currentCTC;
     private Double expectedCTC;
     private String noticePeriod;
     private String currentLocation;
     private String preferredLocation;
-
-
-
-    private List<String> skills;
+    private String skills;
     private String communicationSkills;
     private Double requiredTechnologiesRating;
     private String overallFeedback;
     private String userEmail;
+    private String interviewStatus = "Not Scheduled";
+
+
+
 
     // Constructor that takes a CandidateDetails object
     public CandidateGetResponseDto(CandidateDetails candidate) {
@@ -36,7 +37,7 @@ public class CandidateGetResponseDto {
         this.jobId = candidate.getJobId();
         this.userId = candidate.getUserId();
         this.fullName = candidate.getFullName();
-        this.candidateEmailId = candidate.getCandidateEmailId();
+        this.emailId = candidate.getCandidateEmailId();
         this.contactNumber = candidate.getContactNumber();
         this.currentOrganization = candidate.getCurrentOrganization();
         this.qualification = candidate.getQualification();
@@ -52,11 +53,29 @@ public class CandidateGetResponseDto {
         this.requiredTechnologiesRating = candidate.getRequiredTechnologiesRating();
         this.overallFeedback = candidate.getOverallFeedback();
         this.userEmail = candidate.getUserEmail();
+        this.interviewStatus= determineInterviewStatus(candidate);
+    }
+
+    // Method to determine interview status
+    private String determineInterviewStatus(CandidateDetails candidate) {
+        if (candidate.getInterviewDateTime() == null) {
+            return "Not Scheduled";
+        } else {
+            return "Scheduled";
+        }
     }
 
     // Getters and Setters
     public String getCandidateId() {
         return candidateId;
+    }
+
+    public String getUserEmail() {
+        return userEmail;
+    }
+
+    public void setUserEmail(String userEmail) {
+        this.userEmail = userEmail;
     }
 
     public void setCandidateId(String candidateId) {
@@ -87,12 +106,12 @@ public class CandidateGetResponseDto {
         this.fullName = fullName;
     }
 
-    public String getCandidateEmailId() {
-        return candidateEmailId;
+    public String getEmailId() {
+        return emailId;
     }
 
-    public void setCandidateEmailId(String candidateEmailId) {
-        this.candidateEmailId = candidateEmailId;
+    public void setEmailId(String emailId) {
+        this.emailId = emailId;
     }
 
     public String getContactNumber() {
@@ -119,19 +138,19 @@ public class CandidateGetResponseDto {
         this.qualification = qualification;
     }
 
-    public Integer getTotalExperience() {
+    public float getTotalExperience() {
         return totalExperience;
     }
 
-    public void setTotalExperience(Integer totalExperience) {
+    public void setTotalExperience(float totalExperience) {
         this.totalExperience = totalExperience;
     }
 
-    public String getRelevantExperience() {
+    public float getRelevantExperience() {
         return relevantExperience;
     }
 
-    public void setRelevantExperience(String relevantExperience) {
+    public void setRelevantExperience(float relevantExperience) {
         this.relevantExperience = relevantExperience;
     }
 
@@ -175,11 +194,11 @@ public class CandidateGetResponseDto {
         this.preferredLocation = preferredLocation;
     }
 
-    public List<String> getSkills() {
+    public String getSkills() {
         return skills;
     }
 
-    public void setSkills(List<String> skills) {
+    public void setSkills(String skills) {
         this.skills = skills;
     }
 
@@ -206,12 +225,11 @@ public class CandidateGetResponseDto {
     public void setOverallFeedback(String overallFeedback) {
         this.overallFeedback = overallFeedback;
     }
-
-    public String getUserEmail() {
-        return userEmail;
+    public String getInterviewStatus() {
+        return interviewStatus;
     }
 
-    public void setUserEmail(String userEmail) {
-        this.userEmail = userEmail;
+    public void setInterviewStatus(String interviewStatus) {
+        this.interviewStatus = interviewStatus;
     }
 }

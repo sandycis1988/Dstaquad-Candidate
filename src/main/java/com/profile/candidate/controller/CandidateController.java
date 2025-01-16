@@ -3,19 +3,30 @@ package com.profile.candidate.controller;
 import com.profile.candidate.dto.*;
 import com.profile.candidate.exceptions.CandidateAlreadyExistsException;
 import com.profile.candidate.exceptions.CandidateNotFoundException;
+import com.profile.candidate.exceptions.InvalidFileTypeException;
 import com.profile.candidate.model.CandidateDetails;
+import com.profile.candidate.repository.CandidateRepository;
 import com.profile.candidate.service.CandidateService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDateTime;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
-import java.util.stream.Collectors;
 
+@CrossOrigin(origins = "http://192.168.0.139:3000")  // Specific to this controller
 
 @RestController
 @RequestMapping("/candidate")
@@ -24,18 +35,72 @@ public class CandidateController {
     @Autowired
     private CandidateService candidateService;
 
+    @Autowired
+    private CandidateRepository candidateRepository;
+
     private static final Logger logger = LoggerFactory.getLogger(CandidateController.class);
 
     // Endpoint to submit candidate profile (Create new candidate)
     @PostMapping("/submit")
-    public ResponseEntity<CandidateResponseDto> submitCandidate(@RequestBody CandidateDetails candidateDetails) {
+    public ResponseEntity<CandidateResponseDto> submitCandidate(
+            @RequestParam("jobId") String jobId,
+            @RequestParam("userId") String userId,
+            @RequestParam("fullName") String fullName,
+            @RequestParam("candidateEmailId") String candidateEmailId,
+            @RequestParam("contactNumber") String contactNumber,
+            @RequestParam("qualification") String qualification,
+            @RequestParam("totalExperience") float totalExperience,
+            @RequestParam("currentCTC") Double currentCTC,
+            @RequestParam("expectedCTC") Double expectedCTC,
+            @RequestParam("noticePeriod") String noticePeriod,
+            @RequestParam("currentLocation") String currentLocation,
+            @RequestParam("preferredLocation") String preferredLocation,
+            @RequestParam("skills") String skills,
+            @RequestParam(value = "communicationSkills", required = false) String communicationSkills,
+            @RequestParam(value = "requiredTechnologiesRating", required = false) Double requiredTechnologiesRating,
+            @RequestParam(value = "overallFeedback", required = false) String overallFeedback,
+            @RequestParam(value = "relevantExperience", required = false) float relevantExperience,  // Added new field
+            @RequestParam(value = "currentOrganization", required = false) String currentOrganization,
+            @RequestParam("resumeFile") MultipartFile resumeFile) {
+
         try {
-            // Service method to create or submit the candidate
-            CandidateResponseDto response = candidateService.submitCandidate(candidateDetails);
+
+            if (!isValidFileType(resumeFile)) {
+
+                logger.error("Invalid file type uploaded for candidate {}. Only PDF and DOCX are allowed.", fullName);
+
+                return new ResponseEntity<>(new CandidateResponseDto(
+                        "Invalid file type. Only PDF and DOCX are allowed.",
+                        null, null, null
+                ), HttpStatus.BAD_REQUEST);  // Return 400 if file type is invalid
+            }
+            // Construct CandidateDetails object from request parameters
+            CandidateDetails candidateDetails = new CandidateDetails();
+            candidateDetails.setJobId(jobId);
+            candidateDetails.setUserId(userId);
+            candidateDetails.setFullName(fullName);
+            candidateDetails.setCandidateEmailId(candidateEmailId);
+            candidateDetails.setContactNumber(contactNumber);
+            candidateDetails.setQualification(qualification);
+            candidateDetails.setTotalExperience(totalExperience);
+            candidateDetails.setCurrentCTC(currentCTC);
+            candidateDetails.setExpectedCTC(expectedCTC);
+            candidateDetails.setNoticePeriod(noticePeriod);
+            candidateDetails.setCurrentLocation(currentLocation);
+            candidateDetails.setPreferredLocation(preferredLocation);
+            candidateDetails.setSkills(skills);
+            candidateDetails.setCommunicationSkills(communicationSkills);
+            candidateDetails.setRequiredTechnologiesRating(requiredTechnologiesRating);
+            candidateDetails.setOverallFeedback(overallFeedback);
+            candidateDetails.setRelevantExperience(relevantExperience);  // Set relevant experience
+            candidateDetails.setCurrentOrganization(currentOrganization);
+
+            // Call service method to submit candidate and handle file upload
+            CandidateResponseDto response = candidateService.submitCandidate(candidateDetails, resumeFile);
 
             // Log the success of candidate submission
-            logger.info("Candidate successfully submitted: {}", candidateDetails.getFullName());
-            return new ResponseEntity<>(response, HttpStatus.OK);  // Use CREATED status for successful creation
+            logger.info("Candidate successfully submitted: {}", fullName);
+            return new ResponseEntity<>(response, HttpStatus.OK);  // Return status 200 for successful creation
 
         } catch (CandidateAlreadyExistsException ex) {
             // Handle specific CandidateAlreadyExistsException
@@ -46,7 +111,7 @@ public class CandidateController {
                     null,
                     null
             );
-            return new ResponseEntity<>(errorResponse, HttpStatus.MULTIPLE_CHOICES); // 409 for conflict
+            return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);  // 409 for conflict
 
         } catch (CandidateNotFoundException ex) {
             // Handle specific CandidateNotFoundException
@@ -57,7 +122,18 @@ public class CandidateController {
                     null,
                     null
             );
-            return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);  // 404 for not found
+
+        } catch (IOException ex) {
+            // Handle file I/O exceptions (e.g., file save errors)
+            logger.error("Error processing resume file: {}", ex.getMessage());
+            CandidateResponseDto errorResponse = new CandidateResponseDto(
+                    "Error processing resume file.",
+                    null,
+                    null,
+                    null
+            );
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);  // 500 for internal error
 
         } catch (Exception ex) {
             // General error handler for any issues during candidate submission
@@ -68,9 +144,88 @@ public class CandidateController {
                     null,
                     null
             );
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);  // 500 for internal error
+        }
+    }
+    private boolean isValidFileType(MultipartFile file) {
+        String fileName = file.getOriginalFilename();
+        if (fileName != null) {
+            String fileExtension = getFileExtension(fileName).toLowerCase();
+            return fileExtension.equals("pdf") || fileExtension.equals("docx");
+        }
+        return false;
+    }
+
+    private String getFileExtension(String fileName) {
+        int index = fileName.lastIndexOf(".");
+        if (index > 0) {
+            return fileName.substring(index + 1);
+        }
+        return "";
+    }
+    @PutMapping("/resubmit/{candidateId}")
+    public ResponseEntity<CandidateResponseDto> resubmitCandidate(
+            @PathVariable("candidateId") String candidateId,
+            @RequestParam(value = "jobId", required = false) String jobId,
+            @RequestParam(value = "userId", required = false) String userId,
+            @RequestParam(value = "fullName", required = false) String fullName,
+            @RequestParam(value = "candidateEmailId", required = false) String candidateEmailId,
+            @RequestParam(value = "contactNumber", required = false) String contactNumber,
+            @RequestParam(value = "qualification", required = false) String qualification,
+            @RequestParam(value = "totalExperience", required = false) Float totalExperience,
+            @RequestParam(value = "currentCTC", required = false) Double currentCTC,
+            @RequestParam(value = "expectedCTC", required = false) Double expectedCTC,
+            @RequestParam(value = "noticePeriod", required = false) String noticePeriod,
+            @RequestParam(value = "currentLocation", required = false) String currentLocation,
+            @RequestParam(value = "preferredLocation", required = false) String preferredLocation,
+            @RequestParam(value = "skills", required = false) String skills,
+            @RequestParam(value = "communicationSkills", required = false) String communicationSkills,
+            @RequestParam(value = "requiredTechnologiesRating", required = false) Double requiredTechnologiesRating,
+            @RequestParam(value = "overallFeedback", required = false) String overallFeedback,
+            @RequestParam(value = "relevantExperience", required = false) Float relevantExperience,
+            @RequestParam(value = "currentOrganization", required = false) String currentOrganization,
+            @RequestParam(value = "resumeFile", required = false) MultipartFile resumeFile) {
+
+        try {
+            // Create a CandidateDetails object from the request parameters
+            CandidateDetails updatedCandidateDetails = new CandidateDetails();
+
+            updatedCandidateDetails.setJobId(jobId);
+            updatedCandidateDetails.setUserId(userId);
+            updatedCandidateDetails.setFullName(fullName);
+            updatedCandidateDetails.setCandidateEmailId(candidateEmailId);
+            updatedCandidateDetails.setContactNumber(contactNumber);
+            updatedCandidateDetails.setQualification(qualification);
+            updatedCandidateDetails.setTotalExperience(totalExperience != null ? totalExperience : 0);
+            updatedCandidateDetails.setCurrentCTC(currentCTC);
+            updatedCandidateDetails.setExpectedCTC(expectedCTC);
+            updatedCandidateDetails.setNoticePeriod(noticePeriod);
+            updatedCandidateDetails.setCurrentLocation(currentLocation);
+            updatedCandidateDetails.setPreferredLocation(preferredLocation);
+            updatedCandidateDetails.setSkills(skills);
+            updatedCandidateDetails.setCommunicationSkills(communicationSkills);
+            updatedCandidateDetails.setRequiredTechnologiesRating(requiredTechnologiesRating);
+            updatedCandidateDetails.setOverallFeedback(overallFeedback);
+            updatedCandidateDetails.setRelevantExperience(relevantExperience != null ? relevantExperience : 0);
+            updatedCandidateDetails.setCurrentOrganization(currentOrganization);
+
+            // Call the service method to resubmit the candidate
+            CandidateResponseDto response = candidateService.resubmitCandidate(candidateId, updatedCandidateDetails, resumeFile);
+
+            // Return the response entity with status 200 OK
+            return new ResponseEntity<>(response, HttpStatus.OK);
+
+        } catch (Exception ex) {
+            // Handle any exceptions and return an error response
+            logger.error("An error occurred while resubmitting the candidate: {}", ex.getMessage());
+            CandidateResponseDto errorResponse = new CandidateResponseDto(
+                    "An error occurred while resubmitting the candidate", null, null, null
+            );
             return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+
     // Endpoint to fetch all submitted candidates
     @GetMapping("/submissions/{userId}")
     public ResponseEntity<List<CandidateGetResponseDto>> getAllSubmissions(
@@ -96,6 +251,107 @@ public class CandidateController {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+//    @PostMapping("/upload-resume/{candidateId}")
+//    public ResponseEntity<String> uploadResume(@PathVariable String candidateId,
+//                                               @RequestParam("file") MultipartFile file) {
+//        try {
+//            // Check if file is present
+//            if (file.isEmpty()) {
+//                logger.error("No file uploaded.");
+//                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No file uploaded. Please upload a file.");
+//            }
+//
+//            // Call the service to upload the resume
+//            String resultMessage = candidateService.uploadResume(candidateId, file);
+//
+//            // If the upload is successful, respond with a 200 status code
+//            logger.info("Resume uploaded successfully for candidateId: {}", candidateId);
+//            return ResponseEntity.ok(resultMessage);
+//
+//        } catch (CandidateNotFoundException ex) {
+//            logger.error("Candidate not found for candidateId: {}", candidateId);
+//            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Candidate not found.");
+//        } catch (InvalidFileTypeException ex) {
+//            logger.error("Invalid file type for candidateId: {}", candidateId);
+//            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Only .pdf and .docx files are allowed.");
+//        } catch (MaxUploadSizeExceededException ex) {
+//            logger.error("File size exceeds limit for candidateId: {}", candidateId);
+//            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("File size exceeds the maximum limit.");
+//        } catch (IOException ex) {
+//            logger.error("Error uploading the resume for candidateId: {}", candidateId, ex);
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error uploading the resume.");
+//        } catch (Exception ex) {
+//            logger.error("An unexpected error occurred while uploading resume for candidateId: {}", candidateId, ex);
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred while uploading the resume.");
+//        }
+//    }
+
+
+    // Fetch resume for a candidate
+    @GetMapping("/download-resume/{candidateId}")
+    public ResponseEntity<UrlResource> downloadResume(@PathVariable String candidateId) {
+        try {
+            // Find the candidate by ID to get the resume file path
+            CandidateDetails candidate = candidateRepository.findById(candidateId)
+                    .orElseThrow(() -> new CandidateNotFoundException("Candidate not found"));
+
+            // Get the file path from the candidate entity
+            String resumeFilePath = candidate.getResumeFilePath();
+            Path path = Paths.get(resumeFilePath);
+
+            // Check if the file exists
+            if (Files.exists(path)) {
+                // Create a resource for the file using UrlResource
+                UrlResource resource = new UrlResource(path.toUri());
+
+                // Get the filename and determine the file type
+                String filename = path.getFileName().toString();
+                String contentType = Files.probeContentType(path);
+
+                // If the content type is null, set a default content type
+                if (contentType == null) {
+                    contentType = "application/octet-stream";
+                }
+
+                // Return the file as a resource in the response
+                return ResponseEntity.ok()
+                        .contentType(MediaType.parseMediaType(contentType))
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                        .body(resource);  // Return the UrlResource as a Resource
+            } else {
+                // If the file doesn't exist, return a 404 error
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(null);  // No file found
+            }
+
+        }  catch (CandidateNotFoundException ex) {
+            // Log the error and return a 404 response
+            logger.error("Candidate not found for candidateId: {}", candidateId);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(null);  // No file found for the given candidate
+
+        } catch (FileNotFoundException ex) {
+            // Log the error and return a 404 response if file not found
+            logger.error("File not found for candidateId: {}", candidateId);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(null);  // Resume file doesn't exist
+
+        } catch (IOException ex) {
+            // Log any I/O errors (e.g. access issues with the file)
+            logger.error("Error accessing the resume for candidateId: {}", candidateId, ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(null);  // Some error occurred while accessing the file
+
+        } catch (Exception ex) {
+            // Log any unexpected errors
+            logger.error("An unexpected error occurred while downloading the resume for candidateId: {}", candidateId, ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(null);  // Unexpected error
+        }
+    }
+
+
 
     @PostMapping("/interview-schedule/{userId}")
     public ResponseEntity<InterviewResponseDto> scheduleInterview(
@@ -126,6 +382,17 @@ public class CandidateController {
                         null
                 ));
             }
+            // Check if an interview is already scheduled for the candidate at the specified time
+            boolean isInterviewScheduled = candidateService.isInterviewScheduled(interviewRequest.getCandidateId(), interviewRequest.getInterviewDateTime());
+            if (isInterviewScheduled) {
+                // Return a 400 Bad Request response if an interview is already scheduled
+                return ResponseEntity.badRequest().body(new InterviewResponseDto(
+                        false,
+                        "An interview is already scheduled for this candidate at the specified time.",
+                        null,
+                        null
+                ));
+            }
 
             // Proceed with scheduling the interview if the validation passes
             InterviewResponseDto response = candidateService.scheduleInterview(
@@ -146,7 +413,7 @@ public class CandidateController {
             logger.error("Candidate not found for userId: {}", userId);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new InterviewResponseDto(
                     false,
-                    "Candidate not found.",
+                    "Candidate not found for the User Id.",
                     null,
                     null
             ));

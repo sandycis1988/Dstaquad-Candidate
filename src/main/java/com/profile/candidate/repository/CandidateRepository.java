@@ -4,6 +4,7 @@ import com.profile.candidate.model.CandidateDetails;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,4 +33,16 @@ public interface CandidateRepository extends JpaRepository<CandidateDetails, Str
     List<CandidateDetails> findByUserId(String userId);
 
     Optional<CandidateDetails> findByCandidateIdAndUserId(String candidateId, String userId);
+    Optional<CandidateDetails> findByCandidateIdAndInterviewDateTime(String candidateId, LocalDateTime interviewDateTime);
+    Optional<CandidateDetails> findByCandidateEmailIdAndJobIdAndClientName(
+            String candidateEmailId,
+            String jobId,
+            String clientName);
+
+    Optional<CandidateDetails> findByContactNumberAndJobIdAndClientName(
+            String contactNumber,
+            String jobId,
+            String clientEmail);
+
+
 }

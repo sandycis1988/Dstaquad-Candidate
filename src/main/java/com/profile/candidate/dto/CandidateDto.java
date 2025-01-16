@@ -1,4 +1,7 @@
 package com.profile.candidate.dto;
+import jakarta.persistence.Column;
+import jakarta.persistence.Lob;
+
 import javax.validation.constraints.*;
 
 
@@ -75,6 +78,30 @@ public class CandidateDto {
     private Double requiredTechnologiesRating;
     private String overallFeedback;
 
+
+
+    @Lob
+    @Column(name = "resume")
+    private byte[] resume;  // Store resume as binary data (BLOB)
+
+    @NotBlank(message = "Resume file path is required")
+    private String resumeFilePath;  // Stores the path/URL of the uploaded resume
+
+    public byte[] getResume() {
+        return resume;
+    }
+
+    public void setResume(byte[] resume) {
+        this.resume = resume;
+    }
+    // Getter and setter for resumeFilePath
+    public String getResumeFilePath() {
+        return resumeFilePath;
+    }
+
+    public void setResumeFilePath(String resumeFilePath) {
+        this.resumeFilePath = resumeFilePath;
+    }
 
     // Getters and Setters
 
