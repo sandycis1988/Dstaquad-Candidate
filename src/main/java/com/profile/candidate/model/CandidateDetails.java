@@ -51,9 +51,9 @@ public class CandidateDetails {
 
     @NotNull(message = "Total experience is required")
     @Min(value = 0, message = "Total experience cannot be negative")
-    private Integer totalExperience;
+    private float totalExperience;
 
-    private String relevantExperience;
+    private float relevantExperience;
 
     private Double currentCTC;
 
@@ -65,10 +65,8 @@ public class CandidateDetails {
 
     private String preferredLocation;
 
-    @ElementCollection
-    @CollectionTable(name = "candidate_skills", joinColumns = @JoinColumn(name = "candidate_id"))
-    @Column(name = "skill")
-    private List<String> skills;
+    // Change the skills field from List<String> to String
+    private String skills;  // Now it's just a single string
 
     private String communicationSkills;
 
@@ -109,6 +107,39 @@ public class CandidateDetails {
     @Column(nullable = false)
     private LocalDate profileReceivedDate;
 
+    @Lob
+    @Column(name = "resume", columnDefinition = "LONGBLOB")
+    private byte[] resume;  // Storing file as byte array in DB
+
+    @Column(name = "resume_file_path")
+    private String resumeFilePath;
+
+    @Column(name = "interview_status")
+    private String interviewStatus = "Not Scheduled";
+
+    public String getInterviewStatus() {
+        return interviewStatus;
+    }
+
+    public void setInterviewStatus(String interviewStatus) {
+        this.interviewStatus = interviewStatus;
+    }
+
+    public byte[] getResume() {
+        return resume;
+    }
+
+    public void setResume(byte[] resume) {
+        this.resume = resume;
+    }
+
+    public String getResumeFilePath() {
+        return resumeFilePath;
+    }
+
+    public void setResumeFilePath(String resumeFilePath) {
+        this.resumeFilePath = resumeFilePath;
+    }
 
     @PrePersist
     public void prePersist() {
@@ -219,19 +250,19 @@ public class CandidateDetails {
         this.qualification = qualification;
     }
 
-    public Integer getTotalExperience() {
+    public float getTotalExperience() {
         return totalExperience;
     }
 
-    public void setTotalExperience(Integer totalExperience) {
+    public void setTotalExperience(float totalExperience) {
         this.totalExperience = totalExperience;
     }
 
-    public String getRelevantExperience() {
+    public float getRelevantExperience() {
         return relevantExperience;
     }
 
-    public void setRelevantExperience(String relevantExperience) {
+    public void setRelevantExperience(float relevantExperience) {
         this.relevantExperience = relevantExperience;
     }
 
@@ -275,11 +306,11 @@ public class CandidateDetails {
         this.preferredLocation = preferredLocation;
     }
 
-    public List<String> getSkills() {
+    public String getSkills() {
         return skills;
     }
 
-    public void setSkills(List<String> skills) {
+    public void setSkills(String skills) {
         this.skills = skills;
     }
 

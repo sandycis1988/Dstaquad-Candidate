@@ -6,15 +6,28 @@ import com.profile.candidate.dto.GetInterviewResponseDto;
 import com.profile.candidate.dto.InterviewResponseDto;
 import com.profile.candidate.exceptions.CandidateAlreadyExistsException;
 import com.profile.candidate.exceptions.CandidateNotFoundException;
+import com.profile.candidate.exceptions.InterviewAlreadyScheduledException;
+import com.profile.candidate.exceptions.InvalidFileTypeException;
 import com.profile.candidate.model.CandidateDetails;
 import com.profile.candidate.repository.CandidateRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,7 +40,7 @@ public class CandidateService {
     private InterviewEmailService emailService;
 
     // Method to submit a candidate profile
-    public CandidateResponseDto submitCandidate(CandidateDetails candidateDetails) {
+    public CandidateResponseDto submitCandidate(CandidateDetails candidateDetails, MultipartFile resumeFile) throws IOException {
         // Validate input fields
         validateCandidateDetails(candidateDetails);
 
@@ -37,16 +50,46 @@ public class CandidateService {
         // Optionally set userEmail and clientEmail if not already set
         setDefaultEmailsIfMissing(candidateDetails);
 
+        // Process the resume file and set it as a BLOB
+        if (resumeFile != null && !resumeFile.isEmpty()) {
+            // Convert the resume file to byte[] and set it in the candidateDetails object
+            byte[] resumeData = resumeFile.getBytes();
+            candidateDetails.setResume(resumeData);  // Store the resume as binary data in DB
+
+            // Save the resume to the file system and store the file path in DB
+            String resumeFilePath = saveResumeToFileSystem(resumeFile);
+            candidateDetails.setResumeFilePath(resumeFilePath);  // Store the file path in DB
+        }
+        if (!isValidFileType(resumeFile)) {
+            throw new InvalidFileTypeException("Invalid file type. Only PDF and DOCX are allowed.");
+        }
+
         // Save the candidate details to the database
         CandidateDetails savedCandidate = candidateRepository.save(candidateDetails);
 
-        // Return response DTO
+        // Return response DTO with success message and candidate details
         return new CandidateResponseDto(
                 "Candidate profile submitted successfully.",
                 savedCandidate.getCandidateId(),
                 savedCandidate.getUserId(),
                 savedCandidate.getJobId()
         );
+    }
+    private boolean isValidFileType(MultipartFile file) {
+        String fileName = file.getOriginalFilename();
+        if (fileName != null) {
+            String fileExtension = getFileExtension(fileName).toLowerCase();
+            return fileExtension.equals("pdf") || fileExtension.equals("docx");
+        }
+        return false;
+    }
+
+    private String getFileExtension(String fileName) {
+        int index = fileName.lastIndexOf(".");
+        if (index > 0) {
+            return fileName.substring(index + 1);
+        }
+        return "";
     }
 
     // Validate required candidate fields
@@ -62,26 +105,40 @@ public class CandidateService {
         if (candidateDetails.getContactNumber() == null || !candidateDetails.getContactNumber().matches("\\d{10}")) {
             throw new CandidateAlreadyExistsException("Contact number must be 10 digits.");
         }
-
-
     }
 
-    // Check for duplicate candidate based on Full Name, Email ID, and Contact Number
+    // Check for duplicate candidate based on Email ID, Job ID, and Client Name
     private void checkForDuplicates(CandidateDetails candidateDetails) {
-        // Check for duplicate Full Name
+        Optional<CandidateDetails> existingCandidate =
+                candidateRepository.findByCandidateEmailIdAndJobIdAndClientName(
+                        candidateDetails.getCandidateEmailId(),
+                        candidateDetails.getJobId(),
+                        candidateDetails.getClientName());
 
-        // Check for duplicate Email ID
-        Optional<CandidateDetails> existingEmailId = candidateRepository.findByCandidateEmailId(candidateDetails.getCandidateEmailId());
-        if (existingEmailId.isPresent()) {
-            throw new CandidateAlreadyExistsException("Candidate with the same email ID already exists: " + existingEmailId.get().getCandidateEmailId());
+        if (existingCandidate.isPresent()) {
+            throw new CandidateAlreadyExistsException(
+                    "Candidate with email ID " + existingCandidate.get().getCandidateEmailId() +
+                            " has already been submitted for job " + existingCandidate.get().getJobId() +
+                            " by client " + existingCandidate.get().getClientName()
+            );
         }
+        Optional<CandidateDetails> existingContactNumber =
+                candidateRepository.findByContactNumberAndJobIdAndClientName(
+                        candidateDetails.getContactNumber(),
+                        candidateDetails.getJobId(),
+                        candidateDetails.getClientName());
 
-        // Check for duplicate Contact Number
-        Optional<CandidateDetails> existingContactNumber = candidateRepository.findByContactNumber(candidateDetails.getContactNumber());
         if (existingContactNumber.isPresent()) {
-            throw new CandidateAlreadyExistsException("Candidate with the same contact number already exists: " + existingContactNumber.get().getContactNumber());
+            throw new CandidateAlreadyExistsException(
+                    "Candidate with contact number " + existingContactNumber.get().getContactNumber() +
+                            " has already been submitted for job " + existingContactNumber.get().getJobId() +
+                            " by client " + existingContactNumber.get().getClientName()
+            );
         }
+
+
     }
+
 
     // Set default values for userEmail and clientEmail if not provided
     private void setDefaultEmailsIfMissing(CandidateDetails candidateDetails) {
@@ -94,6 +151,117 @@ public class CandidateService {
         }
     }
 
+    private String saveResumeToFileSystem(MultipartFile resumeFile) throws IOException {
+        // Set the directory where resumes will be stored
+        String resumeDirectory = "C:\\Users\\User\\Downloads"; // Ensure the directory path is correct and does not have extra quotes
+
+        // Generate a unique file name using UUID to avoid conflicts
+        String fileName = UUID.randomUUID().toString() + "-" + resumeFile.getOriginalFilename();
+        Path filePath = Paths.get(resumeDirectory, fileName);
+
+        // Create the directories if they don't exist
+        Files.createDirectories(filePath.getParent());
+
+        // Save the file to the disk
+        Files.write(filePath, resumeFile.getBytes());
+
+        // Return the path where the file is saved
+        return filePath.toString();
+    }
+
+    private static final Logger logger = LoggerFactory.getLogger(CandidateService.class);
+
+//    public String uploadResume(String candidateId, MultipartFile file) throws IOException {
+//        // Validate file type (only .pdf and .docx)
+//        try {
+//            validateFile(file);
+//        } catch (InvalidFileTypeException ex) {
+//            logger.error("Invalid file type for candidateId: {}", candidateId);
+//            throw ex; // rethrow to be caught by controller
+//        }
+//
+//        // Check file size (optional: 10 MB max)
+//        try {
+//            validateFileSize(file);
+//        } catch (RuntimeException ex) {
+//            logger.error("File size exceeds limit for candidateId: {}", candidateId);
+//            throw ex; // rethrow to be caught by controller
+//        }
+//
+//        // Find the candidate by ID
+//        CandidateDetails candidate = candidateRepository.findById(candidateId)
+//                .orElseThrow(() -> new CandidateNotFoundException("Candidate not found"));
+//
+//        // Save the file (either on disk or as a byte array)
+//        try {
+//            saveFile(candidate, file);
+//        } catch (IOException ex) {
+//            logger.error("Error saving the file for candidateId: {}", candidateId, ex);
+//            throw ex; // rethrow to be caught by controller
+//        }
+//
+//        return "Resume uploaded successfully for candidate: " + candidateId;
+//    }
+
+    private void validateFile(MultipartFile file) {
+        String filename = file.getOriginalFilename();
+        if (filename == null || !(filename.endsWith(".pdf") || filename.endsWith(".docx"))) {
+            throw new InvalidFileTypeException("Only .pdf and .docx files are allowed.");
+        }
+    }
+
+    private void validateFileSize(MultipartFile file) {
+        long maxSize = 10 * 1024 * 1024; // 10 MB
+        if (file.getSize() > maxSize) {
+            throw new RuntimeException("File size exceeds the maximum limit of 10 MB.");
+        }
+    }
+
+    private void saveFile(CandidateDetails candidate, MultipartFile file) throws IOException {
+        // Define the path where files will be stored
+        Path uploadsDirectory = Paths.get("uploads");
+
+        // Check if the directory exists, if not, create it
+        if (Files.notExists(uploadsDirectory)) {
+            Files.createDirectories(uploadsDirectory);
+            logger.info("Created directory: {}", uploadsDirectory.toString());
+        }
+
+        // Generate a filename that combines the candidateId and timestamp
+        String filename = candidate.getCandidateId() + "-" + System.currentTimeMillis() + "-" + file.getOriginalFilename();
+        Path targetPath = uploadsDirectory.resolve(filename);  // Save the file inside the "uploads" directory
+
+        // Log the file saving action
+        logger.info("Saving file to path: {}", targetPath);
+
+        // Save the file to the directory
+        Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+
+        // Optionally save the file path in the database (for example, updating the candidate)
+        candidate.setResumeFilePath(targetPath.toString());
+        candidateRepository.save(candidate);
+    }
+
+
+
+    public Resource fetchResume(String candidateId) throws IOException {
+        // Find the candidate by ID to get the resume file path
+        CandidateDetails candidate = candidateRepository.findById(candidateId)
+                .orElseThrow(() -> new CandidateNotFoundException("Candidate not found"));
+
+        // Get the file path from the candidate entity
+        String resumeFilePath = candidate.getResumeFilePath();
+        Path path = Paths.get(resumeFilePath);
+
+        // Check if the file exists
+        if (Files.exists(path)) {
+            // Return the file as a resource
+            return new UrlResource(path.toUri());
+        } else {
+            // If the file doesn't exist, throw an exception
+            throw new IOException("File not found: " + resumeFilePath);
+        }
+    }
     // Method to get all candidate submissions
     public List<CandidateDetails> getSubmissions() {
         // Retrieve all candidates from the repository
@@ -131,6 +299,14 @@ public class CandidateService {
 
         return true; // Candidate is valid for the user
     }
+    public boolean isInterviewScheduled(String candidateId, LocalDateTime interviewDateTime) {
+        // Query the repository to check if there's already an interview scheduled at that time
+        Optional<CandidateDetails> existingInterview = candidateRepository.findByCandidateIdAndInterviewDateTime(candidateId, interviewDateTime);
+
+        // Return true if an interview already exists, otherwise false
+        return existingInterview.isPresent();
+    }
+
 
     // Method to schedule an interview for a candidate
 
@@ -159,6 +335,12 @@ public class CandidateService {
 
         CandidateDetails candidate = optionalCandidate.get();
 
+
+        // Check if an interview is already scheduled for the candidate
+        if (candidate.getInterviewDateTime() != null) {
+            throw new InterviewAlreadyScheduledException("An interview is already scheduled for candidate ID: " + candidateId);
+        }
+
         System.out.println("Found candidate: " + candidate);
 
         // Set userEmail and clientEmail from interview request if provided
@@ -186,8 +368,11 @@ public class CandidateService {
             candidate.setInterviewLevel(interviewLevel);
         }
 
+        // **Update interview status to "Scheduled"**
+        candidate.setInterviewStatus("Scheduled");
         // Save the updated candidate details to the database
         try {
+
             candidateRepository.save(candidate);
             System.out.println("Candidate saved successfully.");
         } catch (Exception e) {
@@ -219,30 +404,46 @@ public class CandidateService {
         emailService.sendInterviewNotification(candidate.getClientEmail(), subject, body);
         emailService.sendInterviewNotification(candidate.getUserEmail(), subject, body);
 
-        // Create the payload for the response
-        InterviewResponseDto.InterviewPayload payload = new InterviewResponseDto.InterviewPayload(
-                candidate.getCandidateId(),
-                candidate.getUserEmail(),
-                candidate.getCandidateEmailId(),
-                candidate.getClientEmail()
-        );
+        try {
+            // Create the payload for the response
+            InterviewResponseDto.InterviewPayload payload = new InterviewResponseDto.InterviewPayload(
+                    candidate.getCandidateId(),
+                    candidate.getUserEmail(),
+                    candidate.getCandidateEmailId(),
+                    candidate.getClientEmail()
+            );
 
-        // Return response DTO with success = true
-        return new InterviewResponseDto(true,
-                "Interview scheduled successfully and email notifications sent.",
-                payload,
-                null);  // No errors
+            // Return response DTO with success = true
+            return new InterviewResponseDto(true,
+                    "Interview scheduled successfully and email notifications sent.",
+                    payload,
+                    null);  // No errors
+        }catch (Exception e) {
+            // If email sending fails, log the error and return a failure response
+            e.printStackTrace();
+
+            InterviewResponseDto.InterviewPayload payload = new InterviewResponseDto.InterviewPayload(
+                    candidate.getCandidateId(),
+                    candidate.getUserEmail(),
+                    candidate.getCandidateEmailId(),
+                    candidate.getClientEmail()
+            );
+
+            return new InterviewResponseDto(false,
+                    "Interview scheduled, but an error occurred while sending email notifications.",
+                    payload,
+                    e.getMessage());  // Return the exception message in case of failure
+        }
     }
 
     public List<GetInterviewResponseDto> getAllScheduledInterviews(String userId) {
-        // Assume you fetch interview records from your repository
         List<CandidateDetails> candidates = candidateRepository.findByUserId(userId);
-
-        // List to store mapped response DTOs
         List<GetInterviewResponseDto> response = new ArrayList<>();
 
-        // Map each Interview entity to GetInterviewResponseDto
         for (CandidateDetails interview : candidates) {
+            // Determine interview status dynamically
+            String interviewStatus = (interview.getInterviewDateTime() != null) ? "Scheduled" : "Not Scheduled";
+
             GetInterviewResponseDto dto = new GetInterviewResponseDto(
                     interview.getJobId(),
                     interview.getCandidateId(),
@@ -257,13 +458,85 @@ public class CandidateService {
                     interview.getTimestamp(),
                     interview.getClientEmail(),
                     interview.getClientName(),
-                    interview.getInterviewLevel()
+                    interview.getInterviewLevel(),
+                    interviewStatus  // Dynamically assign status
             );
             response.add(dto);
         }
 
         return response;
     }
+    public CandidateResponseDto resubmitCandidate(String candidateId, CandidateDetails updatedCandidateDetails, MultipartFile resumeFile) {
+        try {
+            // Fetch the existing candidate from the database
+            Optional<CandidateDetails> existingCandidateOpt = candidateRepository.findById(candidateId);
+            if (!existingCandidateOpt.isPresent()) {
+                return new CandidateResponseDto("Candidate not found", null, null, null);
+            }
+
+            CandidateDetails existingCandidate = existingCandidateOpt.get();
+
+            // Update the fields in the existing candidate with new data
+            updateCandidateFields(existingCandidate, updatedCandidateDetails);
+
+            // Handle file upload if a new resume is provided
+            if (resumeFile != null && !resumeFile.isEmpty()) {
+                if (!isValidFileType(resumeFile)) {
+                    return new CandidateResponseDto("Invalid file type. Only PDF and DOCX are allowed.", null, null, null);
+                }
+                // Save the new resume file and update the file path
+                String newFilePath = saveResumeToFileSystem(resumeFile);
+                existingCandidate.setResumeFilePath(newFilePath);
+            }
+
+            // Save the updated candidate details
+            candidateRepository.save(existingCandidate);
+
+            // Return a success response with the updated candidate details
+            return new CandidateResponseDto(
+                    "Candidate successfully updated", existingCandidate.getCandidateId(),
+                    existingCandidate.getJobId(), existingCandidate.getResumeFilePath()
+            );
+
+        } catch (Exception ex) {
+            logger.error("An error occurred while resubmitting the candidate: {}", ex.getMessage());
+            return new CandidateResponseDto("An error occurred while resubmitting the candidate", null, null, null);
+        }
+    }
+    // Method to update the candidate fields with new values
+    private void updateCandidateFields(CandidateDetails existingCandidate, CandidateDetails updatedCandidateDetails) {
+        if (updatedCandidateDetails.getJobId() != null) existingCandidate.setJobId(updatedCandidateDetails.getJobId());
+        if (updatedCandidateDetails.getUserId() != null) existingCandidate.setUserId(updatedCandidateDetails.getUserId());
+        if (updatedCandidateDetails.getFullName() != null) existingCandidate.setFullName(updatedCandidateDetails.getFullName());
+        if (updatedCandidateDetails.getCandidateEmailId() != null)
+            existingCandidate.setCandidateEmailId(updatedCandidateDetails.getCandidateEmailId());
+        if (updatedCandidateDetails.getContactNumber() != null) existingCandidate.setContactNumber(updatedCandidateDetails.getContactNumber());
+        if (updatedCandidateDetails.getQualification() != null) existingCandidate.setQualification(updatedCandidateDetails.getQualification());
+        if (updatedCandidateDetails.getTotalExperience() != 0)
+            existingCandidate.setTotalExperience(updatedCandidateDetails.getTotalExperience());
+        if (updatedCandidateDetails.getCurrentCTC() != null) existingCandidate.setCurrentCTC(updatedCandidateDetails.getCurrentCTC());
+        if (updatedCandidateDetails.getExpectedCTC() != null)
+            existingCandidate.setExpectedCTC(updatedCandidateDetails.getExpectedCTC());
+        if (updatedCandidateDetails.getNoticePeriod() != null)
+            existingCandidate.setNoticePeriod(updatedCandidateDetails.getNoticePeriod());
+        if (updatedCandidateDetails.getCurrentLocation() != null)
+            existingCandidate.setCurrentLocation(updatedCandidateDetails.getCurrentLocation());
+        if (updatedCandidateDetails.getPreferredLocation() != null)
+            existingCandidate.setPreferredLocation(updatedCandidateDetails.getPreferredLocation());
+        if (updatedCandidateDetails.getSkills() != null) existingCandidate.setSkills(updatedCandidateDetails.getSkills());
+        if (updatedCandidateDetails.getCommunicationSkills() != null)
+            existingCandidate.setCommunicationSkills(updatedCandidateDetails.getCommunicationSkills());
+        if (updatedCandidateDetails.getRequiredTechnologiesRating() != null)
+            existingCandidate.setRequiredTechnologiesRating(updatedCandidateDetails.getRequiredTechnologiesRating());
+        if (updatedCandidateDetails.getOverallFeedback() != null)
+            existingCandidate.setOverallFeedback(updatedCandidateDetails.getOverallFeedback());
+        if (updatedCandidateDetails.getRelevantExperience() != 0)
+            existingCandidate.setRelevantExperience(updatedCandidateDetails.getRelevantExperience());
+        if (updatedCandidateDetails.getCurrentOrganization() != null)
+            existingCandidate.setCurrentOrganization(updatedCandidateDetails.getCurrentOrganization());
+    }
+    // File type validation moved above file processing
+
 
 }
 

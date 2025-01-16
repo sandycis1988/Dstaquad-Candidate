@@ -18,13 +18,15 @@ public class GetInterviewResponseDto {
     private String clientEmail;             // Client Email
     private String clientName;              // Client Name
     private String interviewLevel;          // Interview Level (e.g., 1st, 2nd round)
+    private String interviewStatus;  // New field for status
+
 
     // Constructor
     public GetInterviewResponseDto(String jobId, String candidateId, String candidateFullName,
                                    String candidateContactNo, String emailId, String userEmail,
                                    String userId, LocalDateTime interviewDateTime, Integer duration,
                                    String zoomLink, LocalDateTime interviewScheduledTimestamp,
-                                   String clientEmail, String clientName, String interviewLevel) {
+                                   String clientEmail, String clientName, String interviewLevel,String interviewStatus) {
         this.jobId = jobId;
         this.candidateId = candidateId;
         this.candidateFullName = candidateFullName;
@@ -39,6 +41,7 @@ public class GetInterviewResponseDto {
         this.clientEmail = clientEmail;
         this.clientName = clientName;
         this.interviewLevel = interviewLevel;
+        this.interviewStatus = interviewStatus;
     }
 
     // Getters and Setters
@@ -128,6 +131,14 @@ public class GetInterviewResponseDto {
 
     public void setInterviewScheduledTimestamp(LocalDateTime interviewScheduledTimestamp) {
         this.interviewScheduledTimestamp = interviewScheduledTimestamp;
+    }
+
+    public String getInterviewStatus() {
+        return interviewStatus;
+    }
+
+    public void setInterviewStatus(String interviewStatus) {
+        this.interviewStatus = interviewStatus;
     }
 
     public String getClientEmail() {
