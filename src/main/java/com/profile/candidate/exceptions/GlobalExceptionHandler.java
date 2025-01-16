@@ -21,6 +21,17 @@ public class GlobalExceptionHandler {
         );
         return new ResponseEntity<>(response, HttpStatus.NOT_FOUND); // HTTP 404
     }
+    // Handle InterviewAlreadyScheduledException
+    @ExceptionHandler(InterviewAlreadyScheduledException.class)
+    public ResponseEntity<CandidateResponseDto> handleInterviewAlreadyScheduledException(InterviewAlreadyScheduledException ex) {
+        CandidateResponseDto response = new CandidateResponseDto(
+                ex.getMessage(),  // Custom exception message
+                null,  // candidateId = null
+                null,  // employeeId = null
+                null   // jobId = null
+        );
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST); // HTTP 400 for invalid request
+    }
 
     // Handle CandidateAlreadyExistsException
     @ExceptionHandler(CandidateAlreadyExistsException.class)
