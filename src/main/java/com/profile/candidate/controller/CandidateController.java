@@ -26,7 +26,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
-@CrossOrigin(origins = "http://192.168.0.139:3000")  // Specific to this controller
 
 @RestController
 @RequestMapping("/candidate")
