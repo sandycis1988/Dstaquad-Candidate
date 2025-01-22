@@ -227,7 +227,7 @@ public class CandidateController {
     }
 
     // Endpoint to fetch all submitted candidates without filtering by userId
-    @GetMapping("/submissions/all")
+    @GetMapping("/submissions/allsubmittedcandidates")
     public ResponseEntity<List<CandidateGetResponseDto>> getAllSubmissions() {
         try {
             // Fetch all submissions from the service
