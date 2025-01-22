@@ -24,6 +24,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -262,11 +264,29 @@ public class CandidateService {
             throw new IOException("File not found: " + resumeFilePath);
         }
     }
-    // Method to get all candidate submissions
-    public List<CandidateDetails> getSubmissions() {
-        // Retrieve all candidates from the repository
-        return candidateRepository.findAll();
+//    // Method to get all candidate submissions
+//    public List<CandidateDetails> getSubmissions() {
+//        // Retrieve all candidates from the repository
+//        return candidateRepository.findAll();
+//    }
+// Service method to get all candidate submissions
+public List<CandidateGetResponseDto> getAllSubmissions() {
+    // Retrieve all candidates from the repository
+    List<CandidateDetails> candidates = candidateRepository.findAll();
+
+    // Check if there are no submissions
+    if (candidates.isEmpty()) {
+        throw new CandidateNotFoundException("No candidate submissions found.");
     }
+
+    // Map CandidateDetails to CandidateGetResponseDto
+    return candidates.stream()
+            .map(CandidateGetResponseDto::new)  // Use the DTO constructor for mapping
+            .collect(Collectors.toList());
+}
+
+
+
 
     // Method to get candidate submissions by userId
     public List<CandidateGetResponseDto> getSubmissionsByUserId(String userId) {
@@ -299,7 +319,7 @@ public class CandidateService {
 
         return true; // Candidate is valid for the user
     }
-    public boolean isInterviewScheduled(String candidateId, LocalDateTime interviewDateTime) {
+    public boolean isInterviewScheduled(String candidateId, OffsetDateTime interviewDateTime) {
         // Query the repository to check if there's already an interview scheduled at that time
         Optional<CandidateDetails> existingInterview = candidateRepository.findByCandidateIdAndInterviewDateTime(candidateId, interviewDateTime);
 
@@ -310,9 +330,9 @@ public class CandidateService {
 
     // Method to schedule an interview for a candidate
 
-    public InterviewResponseDto scheduleInterview(String userId, String candidateId, LocalDateTime interviewDateTime, Integer duration,
+    public InterviewResponseDto scheduleInterview(String userId, String candidateId, OffsetDateTime interviewDateTime, Integer duration,
                                                   String zoomLink, String userEmail, String clientEmail,
-                                                  String clientName, String interviewLevel) {
+                                                  String clientName, String interviewLevel, String externalInterviewDetails) {
 
         System.out.println("Starting to schedule interview for userId: " + userId + " and candidateId: " + candidateId);
 
@@ -359,6 +379,9 @@ public class CandidateService {
         candidate.setDuration(duration);
         candidate.setTimestamp(LocalDateTime.now());
         candidate.setZoomLink(zoomLink);
+        candidate.setClientName(clientName);
+        candidate.setInterviewLevel(interviewLevel);
+        candidate.setExternalInterviewDetails(externalInterviewDetails);
 
         // Set the new fields (clientName and interviewLevel)
         if (clientName != null && !clientName.isEmpty()) {
@@ -382,23 +405,30 @@ public class CandidateService {
         }
 
         // Create the email subject and body
+
+        // Build the email body using the provided format
+        // Build the email body using the provided format
+        String body = "Hi " + candidate.getFullName() + ",\n\n"
+                + "Hope you are doing well!\n\n"
+                + "Thank you for your interest in the position <b>" + interviewLevel + "</b> for our client <b>" + clientName + "</b>.\n"
+                + "We're pleased to inform you that your profile has been shortlisted for screening.\n\n"
+                + "As per our discussion, I am scheduling your screening and below are the details:\n\n"
+                + "<b>Date:</b> " + interviewDateTime.format(DateTimeFormatter.BASIC_ISO_DATE) + "\n"
+                + "<b>Time:</b> " + interviewDateTime.format(DateTimeFormatter.ISO_TIME) + "\n"
+                + "<b>Duration:</b> Approx. " + duration + " minutes\n\n"
+                + "<b>Join Zoom Meeting:</b> <a href='" + zoomLink + "'>Click here to join the interview</a>\n\n"
+                + "Kindly confirm your availability by replying to this email. "
+                + "Please let us know if this needs to be rescheduled or if you need further details.\n\n"
+                + "We look forward to speaking with you.\n\n"
+                + "Best regards,\n"
+                + "The Interview Team";
+
+
+        // Create the subject for the email
         String subject = "Interview Scheduled for " + candidate.getFullName();
-        String body = "<p>Dear " + candidate.getFullName() + ",</p>"
-                + "<p>We are pleased to inform you that your interview has been scheduled on <b>" + interviewDateTime + "</b>.</p>"
-                + "<p>Please find the details of your interview below:</p>"
-                + "<ul>"
-                + "<li><b>Zoom Link:</b> <a href='" + zoomLink + "'>Join the Interview</a></li>"
-                + "<li><b>Duration:</b> " + duration + " minutes</li>"
-                + "<li><b>Client:</b> " + clientName + "</li>"
-                + "<li><b>Interview Level:</b> " + interviewLevel + "</li>"
-                + "</ul>"
-                + "<p>We look forward to your participation. Please let us know if you have any questions or need further assistance.</p>"
-                + "<p>Best regards,</p>"
-                + "<p>The Interview Team</p>";
 
         System.out.println("Subject: " + subject);
         System.out.println("Body: " + body);
-
         // Send email to Candidate, Client, and User
         emailService.sendInterviewNotification(candidate.getCandidateEmailId(), subject, body);
         emailService.sendInterviewNotification(candidate.getClientEmail(), subject, body);

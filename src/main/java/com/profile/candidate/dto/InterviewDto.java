@@ -2,10 +2,11 @@ package com.profile.candidate.dto;
 
 import com.profile.candidate.model.CandidateDetails;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 public class InterviewDto {
 
-    private LocalDateTime interviewDateTime;
+    private OffsetDateTime interviewDateTime;
     private Integer duration;
     private String zoomLink;
     private LocalDateTime scheduledTimeStamp;
@@ -14,6 +15,15 @@ public class InterviewDto {
     private String clientName;
     private String candidateId;
     private String fullName;
+    private String externalInterviewDetails;
+
+    public String getExternalInterviewDetails() {
+        return externalInterviewDetails;
+    }
+
+    public void setExternalInterviewDetails(String externalInterviewDetails) {
+        this.externalInterviewDetails = externalInterviewDetails;
+    }
 
     public String getContactNumber() {
         return contactNumber;
@@ -52,11 +62,11 @@ public class InterviewDto {
     // Getters and Setters
 
 
-    public LocalDateTime getInterviewDateTime() {
+    public OffsetDateTime getInterviewDateTime() {
         return interviewDateTime;
     }
 
-    public void setInterviewDateTime(LocalDateTime interviewDateTime) {
+    public void setInterviewDateTime(OffsetDateTime interviewDateTime) {
         this.interviewDateTime = interviewDateTime;
     }
 

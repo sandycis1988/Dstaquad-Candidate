@@ -5,6 +5,7 @@ import javax.validation.constraints.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Random;
 
@@ -55,9 +56,9 @@ public class CandidateDetails {
 
     private float relevantExperience;
 
-    private Double currentCTC;
+    private String currentCTC;
 
-    private Double expectedCTC;
+    private String expectedCTC;
 
     private String noticePeriod;
 
@@ -74,7 +75,7 @@ public class CandidateDetails {
 
     private String overallFeedback;
 
-    private LocalDateTime interviewDateTime;
+    private OffsetDateTime interviewDateTime;
 
     private Integer duration; // in minutes
 
@@ -102,6 +103,15 @@ public class CandidateDetails {
 
     private String interviewLevel;
 
+    private String externalInterviewDetails ;
+
+    public String getExternalInterviewDetails() {
+        return externalInterviewDetails;
+    }
+
+    public void setExternalInterviewDetails(String externalInterviewDetails) {
+        this.externalInterviewDetails = externalInterviewDetails;
+    }
 
     // New field profileReceivedDate
     @Column(nullable = false)
@@ -266,19 +276,19 @@ public class CandidateDetails {
         this.relevantExperience = relevantExperience;
     }
 
-    public Double getCurrentCTC() {
+    public String getCurrentCTC() {
         return currentCTC;
     }
 
-    public void setCurrentCTC(Double currentCTC) {
+    public void setCurrentCTC(String currentCTC) {
         this.currentCTC = currentCTC;
     }
 
-    public Double getExpectedCTC() {
+    public String getExpectedCTC() {
         return expectedCTC;
     }
 
-    public void setExpectedCTC(Double expectedCTC) {
+    public void setExpectedCTC(String expectedCTC) {
         this.expectedCTC = expectedCTC;
     }
 
@@ -338,11 +348,11 @@ public class CandidateDetails {
         this.overallFeedback = overallFeedback;
     }
 
-    public LocalDateTime getInterviewDateTime() {
+    public OffsetDateTime getInterviewDateTime() {
         return interviewDateTime;
     }
 
-    public void setInterviewDateTime(LocalDateTime interviewDateTime) {
+    public void setInterviewDateTime(OffsetDateTime interviewDateTime) {
         this.interviewDateTime = interviewDateTime;
     }
 
