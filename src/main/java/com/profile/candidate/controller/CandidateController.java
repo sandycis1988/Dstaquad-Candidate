@@ -3,7 +3,6 @@ package com.profile.candidate.controller;
 import com.profile.candidate.dto.*;
 import com.profile.candidate.exceptions.CandidateAlreadyExistsException;
 import com.profile.candidate.exceptions.CandidateNotFoundException;
-import com.profile.candidate.exceptions.InvalidFileTypeException;
 import com.profile.candidate.model.CandidateDetails;
 import com.profile.candidate.repository.CandidateRepository;
 import com.profile.candidate.service.CandidateService;
@@ -16,7 +15,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.FileNotFoundException;
@@ -25,6 +23,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+
+@CrossOrigin(origins = "http://192.168.0.140:3000")
 
 
 @RestController
@@ -40,7 +40,7 @@ public class CandidateController {
     private static final Logger logger = LoggerFactory.getLogger(CandidateController.class);
 
     // Endpoint to submit candidate profile (Create new candidate)
-    @PostMapping("/submit")
+    @PostMapping("/candidatesubmissions")
     public ResponseEntity<CandidateResponseDto> submitCandidate(
             @RequestParam("jobId") String jobId,
             @RequestParam("userId") String userId,
@@ -49,8 +49,8 @@ public class CandidateController {
             @RequestParam("contactNumber") String contactNumber,
             @RequestParam("qualification") String qualification,
             @RequestParam("totalExperience") float totalExperience,
-            @RequestParam("currentCTC") Double currentCTC,
-            @RequestParam("expectedCTC") Double expectedCTC,
+            @RequestParam("currentCTC") String currentCTC,
+            @RequestParam("expectedCTC") String expectedCTC,
             @RequestParam("noticePeriod") String noticePeriod,
             @RequestParam("currentLocation") String currentLocation,
             @RequestParam("preferredLocation") String preferredLocation,
@@ -60,6 +60,7 @@ public class CandidateController {
             @RequestParam(value = "overallFeedback", required = false) String overallFeedback,
             @RequestParam(value = "relevantExperience", required = false) float relevantExperience,  // Added new field
             @RequestParam(value = "currentOrganization", required = false) String currentOrganization,
+            @RequestParam(value = "userEmail", required = false) String userEmail,
             @RequestParam("resumeFile") MultipartFile resumeFile) {
 
         try {
@@ -93,6 +94,7 @@ public class CandidateController {
             candidateDetails.setOverallFeedback(overallFeedback);
             candidateDetails.setRelevantExperience(relevantExperience);  // Set relevant experience
             candidateDetails.setCurrentOrganization(currentOrganization);
+            candidateDetails.setUserEmail(userEmail);
 
             // Call service method to submit candidate and handle file upload
             CandidateResponseDto response = candidateService.submitCandidate(candidateDetails, resumeFile);
@@ -162,7 +164,7 @@ public class CandidateController {
         }
         return "";
     }
-    @PutMapping("/resubmit/{candidateId}")
+    @PutMapping("/candidatesubmissions/{candidateId}")
     public ResponseEntity<CandidateResponseDto> resubmitCandidate(
             @PathVariable("candidateId") String candidateId,
             @RequestParam(value = "jobId", required = false) String jobId,
@@ -172,8 +174,8 @@ public class CandidateController {
             @RequestParam(value = "contactNumber", required = false) String contactNumber,
             @RequestParam(value = "qualification", required = false) String qualification,
             @RequestParam(value = "totalExperience", required = false) Float totalExperience,
-            @RequestParam(value = "currentCTC", required = false) Double currentCTC,
-            @RequestParam(value = "expectedCTC", required = false) Double expectedCTC,
+            @RequestParam(value = "currentCTC", required = false) String currentCTC,
+            @RequestParam(value = "expectedCTC", required = false) String expectedCTC,
             @RequestParam(value = "noticePeriod", required = false) String noticePeriod,
             @RequestParam(value = "currentLocation", required = false) String currentLocation,
             @RequestParam(value = "preferredLocation", required = false) String preferredLocation,
@@ -223,6 +225,30 @@ public class CandidateController {
             return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    // Endpoint to fetch all submitted candidates without filtering by userId
+    @GetMapping("/submissions/allsubmittedcandidates")
+    public ResponseEntity<List<CandidateGetResponseDto>> getAllSubmissions() {
+        try {
+            // Fetch all submissions from the service
+            List<CandidateGetResponseDto> submissions = candidateService.getAllSubmissions();
+
+            // Log success
+            logger.info("Fetched {} submissions successfully.", submissions.size());
+
+            // Return response with HTTP 200 OK
+            return ResponseEntity.ok(submissions);
+        } catch (CandidateNotFoundException ex) {
+            // Log not found error
+            logger.error("No candidate submissions found: {}", ex.getMessage());
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        } catch (Exception ex) {
+            // Log unexpected error
+            logger.error("An error occurred while fetching submissions: {}", ex.getMessage(), ex);
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 
 
     // Endpoint to fetch all submitted candidates
@@ -350,8 +376,6 @@ public class CandidateController {
         }
     }
 
-
-
     @PostMapping("/interview-schedule/{userId}")
     public ResponseEntity<InterviewResponseDto> scheduleInterview(
             @PathVariable String userId,
@@ -369,6 +393,17 @@ public class CandidateController {
                         null
                 ));
             }
+            // Check if an interview is already scheduled for the candidate at the specified time
+            boolean isInterviewScheduled = candidateService.isInterviewScheduled(interviewRequest.getCandidateId(), interviewRequest.getInterviewDateTime());
+            if (isInterviewScheduled) {
+                // Return a 400 Bad Request response if an interview is already scheduled
+                return ResponseEntity.badRequest().body(new InterviewResponseDto(
+                        false,
+                        "An interview is already scheduled for this candidate at the specified time.",
+                        null,
+                        null
+                ));
+            }
 
             // Check if the candidate belongs to the user
             boolean isValidCandidate = candidateService.isCandidateValidForUser(userId, interviewRequest.getCandidateId());
@@ -377,17 +412,6 @@ public class CandidateController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new InterviewResponseDto(
                         false,
                         "Candidate ID does not belong to the provided userId.",
-                        null,
-                        null
-                ));
-            }
-            // Check if an interview is already scheduled for the candidate at the specified time
-            boolean isInterviewScheduled = candidateService.isInterviewScheduled(interviewRequest.getCandidateId(), interviewRequest.getInterviewDateTime());
-            if (isInterviewScheduled) {
-                // Return a 400 Bad Request response if an interview is already scheduled
-                return ResponseEntity.badRequest().body(new InterviewResponseDto(
-                        false,
-                        "An interview is already scheduled for this candidate at the specified time.",
                         null,
                         null
                 ));
@@ -403,7 +427,8 @@ public class CandidateController {
                     interviewRequest.getUserEmail(), // Pass userEmail
                     interviewRequest.getClientEmail(),
                     interviewRequest.getClientName(),
-                    interviewRequest.getInterviewLevel() // Pass clientEmail
+                    interviewRequest.getInterviewLevel(),// Pass clientEmail
+                    interviewRequest.getExternalInterviewDetails()
             );
 
             return ResponseEntity.ok(response);

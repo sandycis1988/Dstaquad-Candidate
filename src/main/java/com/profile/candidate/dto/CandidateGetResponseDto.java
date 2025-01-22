@@ -16,8 +16,8 @@ public class CandidateGetResponseDto {
     private String qualification;
     private float totalExperience;
     private float relevantExperience;
-    private Double currentCTC;
-    private Double expectedCTC;
+    private String currentCTC;
+    private String expectedCTC;
     private String noticePeriod;
     private String currentLocation;
     private String preferredLocation;
@@ -154,19 +154,19 @@ public class CandidateGetResponseDto {
         this.relevantExperience = relevantExperience;
     }
 
-    public Double getCurrentCTC() {
+    public String getCurrentCTC() {
         return currentCTC;
     }
 
-    public void setCurrentCTC(Double currentCTC) {
+    public void setCurrentCTC(String currentCTC) {
         this.currentCTC = currentCTC;
     }
 
-    public Double getExpectedCTC() {
+    public String getExpectedCTC() {
         return expectedCTC;
     }
 
-    public void setExpectedCTC(Double expectedCTC) {
+    public void setExpectedCTC(String expectedCTC) {
         this.expectedCTC = expectedCTC;
     }
 

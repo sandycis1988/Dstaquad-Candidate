@@ -1,6 +1,7 @@
 package com.profile.candidate.dto;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 public class GetInterviewResponseDto {
 
@@ -11,7 +12,7 @@ public class GetInterviewResponseDto {
     private String candidateEmailId;                 // Candidate Email ID
     private String userEmail;               // User's Email
     private String userId;                  // User ID (interviewer)
-    private LocalDateTime interviewDateTime; // Interview Date & Time
+    private OffsetDateTime interviewDateTime; // Interview Date & Time
     private Integer duration;               // Duration of the interview
     private String zoomLink;                // Zoom Link for the interview
     private LocalDateTime interviewScheduledTimestamp; // Timestamp when interview is scheduled
@@ -24,7 +25,7 @@ public class GetInterviewResponseDto {
     // Constructor
     public GetInterviewResponseDto(String jobId, String candidateId, String candidateFullName,
                                    String candidateContactNo, String emailId, String userEmail,
-                                   String userId, LocalDateTime interviewDateTime, Integer duration,
+                                   String userId, OffsetDateTime interviewDateTime, Integer duration,
                                    String zoomLink, LocalDateTime interviewScheduledTimestamp,
                                    String clientEmail, String clientName, String interviewLevel,String interviewStatus) {
         this.jobId = jobId;
@@ -101,11 +102,11 @@ public class GetInterviewResponseDto {
         this.userId = userId;
     }
 
-    public LocalDateTime getInterviewDateTime() {
+    public OffsetDateTime getInterviewDateTime() {
         return interviewDateTime;
     }
 
-    public void setInterviewDateTime(LocalDateTime interviewDateTime) {
+    public void setInterviewDateTime(OffsetDateTime interviewDateTime) {
         this.interviewDateTime = interviewDateTime;
     }
 
