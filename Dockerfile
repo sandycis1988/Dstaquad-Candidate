@@ -1,7 +1,7 @@
 FROM openjdk:17-jdk-slim AS builder
 
 # Install Maven
-RUN apt-get update && apt-get install -y maven
+RUN apt-get update && apt-get install -y maven && apt-get install -y curl
 
 # Set the working directory in the container
 WORKDIR /app
