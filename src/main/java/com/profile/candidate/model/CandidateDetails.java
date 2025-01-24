@@ -1,6 +1,7 @@
 package com.profile.candidate.model;
 
 import jakarta.persistence.*;
+
 import javax.validation.constraints.*;
 
 import java.time.LocalDate;
@@ -103,7 +104,7 @@ public class CandidateDetails {
 
     private String interviewLevel;
 
-    private String externalInterviewDetails ;
+    private String externalInterviewDetails;
 
     public String getExternalInterviewDetails() {
         return externalInterviewDetails;
