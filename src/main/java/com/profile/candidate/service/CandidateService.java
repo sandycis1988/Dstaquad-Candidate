@@ -408,20 +408,21 @@ public List<CandidateGetResponseDto> getAllSubmissions() {
 
         // Build the email body using the provided format
         // Build the email body using the provided format
-        String body = "Hi " + candidate.getFullName() + ",\n\n"
-                + "Hope you are doing well!\n\n"
-                + "Thank you for your interest in the position <b>" + interviewLevel + "</b> for our client <b>" + clientName + "</b>.\n"
-                + "We're pleased to inform you that your profile has been shortlisted for screening.\n\n"
-                + "As per our discussion, I am scheduling your screening and below are the details:\n\n"
-                + "<b>Date:</b> " + interviewDateTime.format(DateTimeFormatter.BASIC_ISO_DATE) + "\n"
-                + "<b>Time:</b> " + interviewDateTime.format(DateTimeFormatter.ISO_TIME) + "\n"
-                + "<b>Duration:</b> Approx. " + duration + " minutes\n\n"
-                + "<b>Join Zoom Meeting:</b> <a href='" + zoomLink + "'>Click here to join the interview</a>\n\n"
-                + "Kindly confirm your availability by replying to this email. "
-                + "Please let us know if this needs to be rescheduled or if you need further details.\n\n"
-                + "We look forward to speaking with you.\n\n"
-                + "Best regards,\n"
-                + "The Interview Team";
+        String body = "<p>Hello " + candidate.getFullName() + ",\n\n</p>"
+                + "<p>Hope you are doing well!\n\n</p>"
+                + "<p>Thank you for your interest in the position <b>" + interviewLevel + "</b> for our client <b>" + clientName + "</b>.\n\n</p>"
+                + "<p>We're pleased to inform you that your profile has been shortlisted for screening.\n\n</p>"
+                + "<p>As mentioned earlier, I am scheduling your screening, and below are the details:\n\n</p>"
+                + "<ul>\n"
+                + "<li><b>Date:</b> " + interviewDateTime.format(DateTimeFormatter.BASIC_ISO_DATE) + "</li>\n"
+                + "<li><b>Time:</b> " + interviewDateTime.format(DateTimeFormatter.ISO_TIME) + "</li>\n"
+                + "<li><b>Duration:</b> Approx. " + duration + " minutes</li>\n"
+                + "<li><b>Join Zoom Meeting:</b> <a href='" + zoomLink + "'>Click here to join the interview</a></li>\n"
+                + "</ul>\n\n"
+                + "<p>Kindly confirm your availability by replying to this email. Please let us know if this needs to be rescheduled or if you need further details.\n\n</p>"
+                + "<p>We look forward to speaking with you.\n\n</p>"
+                + "<p>Best regards,\n</p>"
+                + "<p>The Interview Team</p>";
 
 
         // Create the subject for the email
