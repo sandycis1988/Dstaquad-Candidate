@@ -1,56 +1,89 @@
 package com.profile.candidate.dto;
 
-
-import java.util.StringJoiner;
-
 public class CandidateResponseDto {
 
-    private String message;
-    private String candidateId;
-    private String employeeId;
-    private String jobId;
+    private String status;  // Success or Error
+    private String message;  // Message to describe the status
+    private Payload payload;  // Contains candidateId, employeeId, and jobId
+    private String errorMessage;  // Error message in case of failure
 
     // Constructor
-    public CandidateResponseDto(String message, String candidateId, String employeeId, String jobId) {
+    public CandidateResponseDto(String status, String message, Payload payload, String errorMessage) {
+        this.status = status;
         this.message = message;
-        this.candidateId = candidateId;
-        this.employeeId = employeeId;
-        this.jobId = jobId;
-
-    }
-
-    public String getEmployeeId() {
-        return employeeId;
-    }
-
-    public void setEmployeeId(String employeeId) {
-        this.employeeId = employeeId;
-    }
-
-    public String getJobId() {
-        return jobId;
-    }
-
-    public void setJobId(String jobId) {
-        this.jobId = jobId;
+        this.payload = payload;
+        this.errorMessage = errorMessage;
     }
 
     // Getters and Setters
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
     public String getMessage() {
         return message;
     }
 
     public void setMessage(String message) {
-
         this.message = message;
     }
 
-    public String getCandidateId() {
-        return candidateId;
+    public Payload getPayload() {
+        return payload;
     }
 
-    public void setCandidateId(String candidateId) {
-        this.candidateId = candidateId;
+    public void setPayload(Payload payload) {
+        this.payload = payload;
+    }
+
+    public String getErrorMessage() {
+        return errorMessage;
+    }
+
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
+    }
+
+    // Inner Payload class to represent candidateId, employeeId, and jobId
+    public static class Payload {
+        private String candidateId;
+        private String employeeId;
+        private String jobId;
+
+        // Constructor
+        public Payload(String candidateId, String employeeId, String jobId) {
+            this.candidateId = candidateId;
+            this.employeeId = employeeId;
+            this.jobId = jobId;
+        }
+
+        // Getters and Setters
+        public String getCandidateId() {
+            return candidateId;
+        }
+
+        public void setCandidateId(String candidateId) {
+            this.candidateId = candidateId;
+        }
+
+        public String getEmployeeId() {
+            return employeeId;
+        }
+
+        public void setEmployeeId(String employeeId) {
+            this.employeeId = employeeId;
+        }
+
+        public String getJobId() {
+            return jobId;
+        }
+
+        public void setJobId(String jobId) {
+            this.jobId = jobId;
+        }
     }
 }
-

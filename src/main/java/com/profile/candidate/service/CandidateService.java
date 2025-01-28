@@ -1,9 +1,6 @@
 package com.profile.candidate.service;
 
-import com.profile.candidate.dto.CandidateGetResponseDto;
-import com.profile.candidate.dto.CandidateResponseDto;
-import com.profile.candidate.dto.GetInterviewResponseDto;
-import com.profile.candidate.dto.InterviewResponseDto;
+import com.profile.candidate.dto.*;
 import com.profile.candidate.exceptions.CandidateAlreadyExistsException;
 import com.profile.candidate.exceptions.CandidateNotFoundException;
 import com.profile.candidate.exceptions.InterviewAlreadyScheduledException;
@@ -69,13 +66,21 @@ public class CandidateService {
         // Save the candidate details to the database
         CandidateDetails savedCandidate = candidateRepository.save(candidateDetails);
 
-        // Return response DTO with success message and candidate details
-        return new CandidateResponseDto(
-                "Candidate profile submitted successfully.",
+        // Create the payload with candidateId, employeeId, and jobId
+        CandidateResponseDto.Payload payload = new CandidateResponseDto.Payload(
                 savedCandidate.getCandidateId(),
                 savedCandidate.getUserId(),
                 savedCandidate.getJobId()
         );
+
+// Return the response with status "Success" and the corresponding message
+        return new CandidateResponseDto(
+                "Success",  // Status
+                "Candidate profile submitted successfully.",  // Message
+                payload,  // Payload containing the candidateId, employeeId, and jobId
+                null  // No error message
+        );
+
     }
     private boolean isValidFileType(MultipartFile file) {
         String fileName = file.getOriginalFilename();
@@ -502,38 +507,53 @@ public List<CandidateGetResponseDto> getAllSubmissions() {
             // Fetch the existing candidate from the database
             Optional<CandidateDetails> existingCandidateOpt = candidateRepository.findById(candidateId);
             if (!existingCandidateOpt.isPresent()) {
-                return new CandidateResponseDto("Candidate not found", null, null, null);
+                throw new CandidateNotFoundException(candidateId); // Use custom exception
             }
 
-            CandidateDetails existingCandidate = existingCandidateOpt.get();
+            CandidateDetails existingCandidate = existingCandidateOpt.get(); // If the resume is required but is null or empty, return an error response
+            if (resumeFile == null || resumeFile.isEmpty()) {
+                return new CandidateResponseDto("Error", "Resume file is required for resubmission",
+                        new CandidateResponseDto.Payload(null, null, null), null);
+            }
 
             // Update the fields in the existing candidate with new data
             updateCandidateFields(existingCandidate, updatedCandidateDetails);
 
+
             // Handle file upload if a new resume is provided
-            if (resumeFile != null && !resumeFile.isEmpty()) {
-                if (!isValidFileType(resumeFile)) {
-                    return new CandidateResponseDto("Invalid file type. Only PDF and DOCX are allowed.", null, null, null);
-                }
-                // Save the new resume file and update the file path
-                String newFilePath = saveResumeToFileSystem(resumeFile);
-                existingCandidate.setResumeFilePath(newFilePath);
+            if (!isValidFileType(resumeFile)) {
+                // Log invalid file type for debugging purposes
+                return new CandidateResponseDto("Error", "Invalid file type. Only PDF and DOCX are allowed.",
+                        new CandidateResponseDto.Payload(null, null, null), null);
             }
 
             // Save the updated candidate details
             candidateRepository.save(existingCandidate);
 
             // Return a success response with the updated candidate details
-            return new CandidateResponseDto(
-                    "Candidate successfully updated", existingCandidate.getCandidateId(),
-                    existingCandidate.getJobId(), existingCandidate.getResumeFilePath()
+            CandidateResponseDto.Payload payload = new CandidateResponseDto.Payload(
+                    existingCandidate.getCandidateId(),
+                    existingCandidate.getUserId(),
+                    existingCandidate.getJobId()
             );
 
+            return new CandidateResponseDto(
+                    "Success",
+                    "Candidate successfully updated",
+                    payload,
+                    null // errorMessage is null since no error occurred
+            );
+
+        } catch (CandidateNotFoundException | InvalidFileTypeException ex) {
+            // These exceptions are already handled by GlobalExceptionHandler, so no need to catch them here
+            throw ex; // Rethrow to be caught by GlobalExceptionHandler
         } catch (Exception ex) {
             logger.error("An error occurred while resubmitting the candidate: {}", ex.getMessage());
-            return new CandidateResponseDto("An error occurred while resubmitting the candidate", null, null, null);
+            throw new RuntimeException("An unexpected error occurred while resubmitting the candidate", ex);
         }
     }
+
+
     // Method to update the candidate fields with new values
     private void updateCandidateFields(CandidateDetails existingCandidate, CandidateDetails updatedCandidateDetails) {
         if (updatedCandidateDetails.getJobId() != null) existingCandidate.setJobId(updatedCandidateDetails.getJobId());
@@ -566,7 +586,29 @@ public List<CandidateGetResponseDto> getAllSubmissions() {
         if (updatedCandidateDetails.getCurrentOrganization() != null)
             existingCandidate.setCurrentOrganization(updatedCandidateDetails.getCurrentOrganization());
     }
+
     // File type validation moved above file processing
+    public DeleteCandidateResponseDto deleteCandidateById(String candidateId) throws Exception {
+        // Fetch candidate details before deletion
+        CandidateDetails candidate = candidateRepository.findById(candidateId)
+                .orElseThrow(() -> new Exception("Candidate not found with id: " + candidateId));
+
+        // Store the candidate details before deletion
+        String candidateIdBeforeDelete = candidate.getCandidateId();
+        String candidateNameBeforeDelete = candidate.getFullName();
+
+        // Delete the candidate from the repository
+        candidateRepository.delete(candidate);
+
+        // Prepare the response with candidate details
+        DeleteCandidateResponseDto.Payload payload = new DeleteCandidateResponseDto.Payload(candidateIdBeforeDelete, candidateNameBeforeDelete);
+
+        // Return response with status, message, and candidate details
+        return new DeleteCandidateResponseDto("Success",
+                "Candidate deleted successfully",
+                payload,
+                null);
+    }
 
 
 }
