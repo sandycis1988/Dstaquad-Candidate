@@ -24,7 +24,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
-@CrossOrigin(origins = "http://35.188.150.92")
+@CrossOrigin(origins = {"http://35.188.150.92", "http://192.168.0.140:3000", "http://192.168.0.139:3000"})
+
 
 
 @RestController
@@ -58,22 +59,26 @@ public class CandidateController {
             @RequestParam(value = "communicationSkills", required = false) String communicationSkills,
             @RequestParam(value = "requiredTechnologiesRating", required = false) Double requiredTechnologiesRating,
             @RequestParam(value = "overallFeedback", required = false) String overallFeedback,
-            @RequestParam(value = "relevantExperience", required = false) float relevantExperience,  // Added new field
+            @RequestParam(value = "relevantExperience", required = false) float relevantExperience,
             @RequestParam(value = "currentOrganization", required = false) String currentOrganization,
             @RequestParam(value = "userEmail", required = false) String userEmail,
             @RequestParam("resumeFile") MultipartFile resumeFile) {
 
         try {
-
+            // Check if the resume file is valid (PDF or DOCX)
             if (!isValidFileType(resumeFile)) {
-
+                // Log the invalid file type error
                 logger.error("Invalid file type uploaded for candidate {}. Only PDF and DOCX are allowed.", fullName);
 
+                // Return the error response in the correct format
                 return new ResponseEntity<>(new CandidateResponseDto(
+                        "Error",
                         "Invalid file type. Only PDF and DOCX are allowed.",
-                        null, null, null
-                ), HttpStatus.BAD_REQUEST);  // Return 400 if file type is invalid
+                        new CandidateResponseDto.Payload(null, null, null),
+                        null
+                ), HttpStatus.BAD_REQUEST); // Return HTTP 400 for invalid file type
             }
+
             // Construct CandidateDetails object from request parameters
             CandidateDetails candidateDetails = new CandidateDetails();
             candidateDetails.setJobId(jobId);
@@ -92,62 +97,65 @@ public class CandidateController {
             candidateDetails.setCommunicationSkills(communicationSkills);
             candidateDetails.setRequiredTechnologiesRating(requiredTechnologiesRating);
             candidateDetails.setOverallFeedback(overallFeedback);
-            candidateDetails.setRelevantExperience(relevantExperience);  // Set relevant experience
+            candidateDetails.setRelevantExperience(relevantExperience);
             candidateDetails.setCurrentOrganization(currentOrganization);
             candidateDetails.setUserEmail(userEmail);
 
-            // Call service method to submit candidate and handle file upload
+            // Call service method to submit the candidate and handle file upload
             CandidateResponseDto response = candidateService.submitCandidate(candidateDetails, resumeFile);
 
             // Log the success of candidate submission
             logger.info("Candidate successfully submitted: {}", fullName);
-            return new ResponseEntity<>(response, HttpStatus.OK);  // Return status 200 for successful creation
+
+            // Return success response
+            return new ResponseEntity<>(response, HttpStatus.OK);
 
         } catch (CandidateAlreadyExistsException ex) {
             // Handle specific CandidateAlreadyExistsException
             logger.error("Candidate already exists: {}", ex.getMessage());
             CandidateResponseDto errorResponse = new CandidateResponseDto(
+                    "Error",
                     ex.getMessage(),
-                    null,
-                    null,
+                    new CandidateResponseDto.Payload(null, null, null),
                     null
             );
-            return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);  // 409 for conflict
+            return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT); // 409 Conflict
 
         } catch (CandidateNotFoundException ex) {
             // Handle specific CandidateNotFoundException
             logger.error("Candidate not found: {}", ex.getMessage());
             CandidateResponseDto errorResponse = new CandidateResponseDto(
+                    "Error",
                     "Candidate not found",
-                    null,
-                    null,
+                    new CandidateResponseDto.Payload(null, null, null),
                     null
             );
-            return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);  // 404 for not found
+            return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND); // 404 Not Found
 
         } catch (IOException ex) {
             // Handle file I/O exceptions (e.g., file save errors)
             logger.error("Error processing resume file: {}", ex.getMessage());
             CandidateResponseDto errorResponse = new CandidateResponseDto(
+                    "Error",
                     "Error processing resume file.",
-                    null,
-                    null,
+                    new CandidateResponseDto.Payload(null, null, null),
                     null
             );
-            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);  // 500 for internal error
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error
 
         } catch (Exception ex) {
             // General error handler for any issues during candidate submission
             logger.error("An error occurred while submitting the candidate: {}", ex.getMessage());
             CandidateResponseDto errorResponse = new CandidateResponseDto(
+                    "Error",
                     "An error occurred while submitting the candidate",
-                    null,
-                    null,
+                    new CandidateResponseDto.Payload(null, null, null),
                     null
             );
-            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);  // 500 for internal error
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error
         }
     }
+
     private boolean isValidFileType(MultipartFile file) {
         String fileName = file.getOriginalFilename();
         if (fileName != null) {
@@ -471,6 +479,29 @@ public class CandidateController {
         } catch (Exception ex) {
             // If any other error occurs
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    @DeleteMapping("/deletecandidate/{candidateId}")
+    public ResponseEntity<DeleteCandidateResponseDto> deleteCandidate(@PathVariable("candidateId") String candidateId) {
+        try {
+            // Call the service method to delete the candidate by ID and get the response DTO
+            DeleteCandidateResponseDto response = candidateService.deleteCandidateById(candidateId);
+
+            // Return the response entity with status 200 OK
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (Exception ex) {
+            // Handle any exceptions and return an error response
+            logger.error("An error occurred while deleting the candidate: {}", ex.getMessage());
+
+            // Create an error response DTO with error details
+            DeleteCandidateResponseDto errorResponse = new DeleteCandidateResponseDto(
+                    "error",
+                    "Error occurred while deleting the candidate.",
+                    null,
+                    ex.getMessage()
+            );
+
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

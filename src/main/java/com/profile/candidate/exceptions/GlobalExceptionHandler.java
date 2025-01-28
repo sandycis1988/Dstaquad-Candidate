@@ -33,6 +33,18 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST); // HTTP 400 for invalid request
     }
 
+    @ExceptionHandler(InvalidFileTypeException.class)
+    public ResponseEntity<CandidateResponseDto> handleInvalidFileTypeException(InvalidFileTypeException ex) {
+        // Prepare the error response
+        CandidateResponseDto.Payload payload = new CandidateResponseDto.Payload(null, null, null);
+        CandidateResponseDto response = new CandidateResponseDto(
+                "Error", // Status
+                ex.getMessage(), // Error message
+                payload, // Empty payload for now
+                ex.getMessage() // Same error message for the response
+        );
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
     // Handle CandidateAlreadyExistsException
     @ExceptionHandler(CandidateAlreadyExistsException.class)
     public ResponseEntity<CandidateResponseDto> handleCandidateAlreadyExistsException(CandidateAlreadyExistsException ex) {
