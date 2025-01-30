@@ -43,6 +43,6 @@ public interface CandidateRepository extends JpaRepository<CandidateDetails, Str
             String contactNumber,
             String jobId,
             String clientEmail);
-
-
+    // Method to fetch all candidates (this is already provided by JpaRepository)
+    List<CandidateDetails> findAll();
 }

@@ -467,7 +467,7 @@ public class CandidateController {
             @PathVariable String userId) {
         try {
             // Fetch all scheduled interviews for the given userId
-            List<GetInterviewResponseDto> interviewDetails = candidateService.getAllScheduledInterviews(userId);
+            List<GetInterviewResponseDto> interviewDetails = candidateService.getAllScheduledInterviewsByUserId(userId);
 
             // Return response with status 200 OK and the interview details
             return ResponseEntity.ok(interviewDetails);
@@ -481,6 +481,19 @@ public class CandidateController {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    // Endpoint to fetch all scheduled interviews (no userId filter)
+    @GetMapping("/allscheduledinterviews")
+    public ResponseEntity<List<GetInterviewResponseDto>> getAllScheduledInterviews() {
+        try {
+            List<GetInterviewResponseDto> interviews = candidateService.getAllScheduledInterviews();
+            return ResponseEntity.ok(interviews);
+        } catch (Exception ex) {
+            // Handle exceptions
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     @DeleteMapping("/deletecandidate/{candidateId}")
     public ResponseEntity<DeleteCandidateResponseDto> deleteCandidate(@PathVariable("candidateId") String candidateId) {
         try {
