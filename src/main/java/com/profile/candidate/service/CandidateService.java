@@ -471,8 +471,42 @@ public List<CandidateGetResponseDto> getAllSubmissions() {
                     e.getMessage());  // Return the exception message in case of failure
         }
     }
+    public List<GetInterviewResponseDto> getAllScheduledInterviews() {
+        // Fetch all candidates (no userId filter)
+        List<CandidateDetails> candidates = candidateRepository.findAll();
+        List<GetInterviewResponseDto> response = new ArrayList<>();
 
-    public List<GetInterviewResponseDto> getAllScheduledInterviews(String userId) {
+        for (CandidateDetails interview : candidates) {
+            // Determine interview status dynamically
+            String interviewStatus = (interview.getInterviewDateTime() != null) ? "Scheduled" : "Not Scheduled";
+
+            // Map each CandidateDetails to GetInterviewResponseDto
+            GetInterviewResponseDto dto = new GetInterviewResponseDto(
+                    interview.getJobId(),
+                    interview.getCandidateId(),
+                    interview.getFullName(),
+                    interview.getContactNumber(),
+                    interview.getCandidateEmailId(),
+                    interview.getUserEmail(),
+                    interview.getUserId(),
+                    interview.getInterviewDateTime(),
+                    interview.getDuration(),
+                    interview.getZoomLink(),
+                    interview.getTimestamp(),
+                    interview.getClientEmail(),
+                    interview.getClientName(),
+                    interview.getInterviewLevel(),
+                    interviewStatus  // Dynamically assign status
+            );
+            response.add(dto);
+        }
+
+        return response;
+    }
+
+
+
+    public List<GetInterviewResponseDto> getAllScheduledInterviewsByUserId(String userId) {
         List<CandidateDetails> candidates = candidateRepository.findByUserId(userId);
         List<GetInterviewResponseDto> response = new ArrayList<>();
 
@@ -502,6 +536,7 @@ public List<CandidateGetResponseDto> getAllSubmissions() {
 
         return response;
     }
+
     public CandidateResponseDto resubmitCandidate(String candidateId, CandidateDetails updatedCandidateDetails, MultipartFile resumeFile) {
         try {
             // Fetch the existing candidate from the database
