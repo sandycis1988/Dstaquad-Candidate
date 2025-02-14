@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = "sandycis476/candidate"
         DOCKER_TAG = "latest"
-        DOCKER_CREDS = credentials('"docker-hub"')
+        DOCKER_CREDS = credentials('docker-hub')
     }
 
     stages {
