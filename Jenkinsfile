@@ -5,6 +5,7 @@ pipeline {
         DOCKER_IMAGE = "sandycis476/candidate"
         DOCKER_TAG = "latest"
         DOCKER_CREDS = credentials('docker-hub')
+        KUBECONFIG = credentials('k8s-service-account-token')
     }
 
     stages {
