@@ -87,17 +87,7 @@ pipeline {
             }
         }
 
-        stage('Clean Up Old Docker Images') {
-            steps {
-                script {
-                    // Keep only the last 5 images in Docker Hub (manual cleanup example)
-                    sh """
-                        # List all image tags, sort by creation date, and keep only the last 5
-                        docker images ${DOCKER_IMAGE} --format "{{.ID}} {{.CreatedAt}}" | sort -rk2 | awk "NR>5 {print $1}" | xargs -r docker rmi -f
-                    """
-                }
-            }
-        }
+
     }
 
     post {
