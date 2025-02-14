@@ -6,9 +6,22 @@ pipeline {
         DOCKER_TAG = "latest"
         DOCKER_CREDS = credentials('docker-hub')
         KUBECONFIG = credentials('k8s-service-account-token')
+        DOCKER_CONFIG = "${WORKSPACE}/.docker" // Custom Docker config directory
     }
 
     stages {
+        stage('Prepare Docker Config') {
+            steps {
+                script {
+                    // Create a custom Docker config directory
+                    sh """
+                        mkdir -p ${DOCKER_CONFIG}
+                        echo '{}' > ${DOCKER_CONFIG}/config.json
+                    """
+                }
+            }
+        }
+
         stage('Checkout GitHub Repository') {
             steps {
                 git branch: 'master', url: 'https://github.com/sandycis1988/Dstaquad-Candidate.git'
@@ -36,7 +49,6 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    // Apply the Kubernetes manifest
                     sh """
                         kubectl apply -f deployment.yaml
                     """
