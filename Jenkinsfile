@@ -2,46 +2,32 @@ pipeline {
     agent any
 
     environment {
-        // Define your Docker Hub image name
         DOCKER_IMAGE = "sandycis476/candidate"
-        // Define your Kubernetes namespace
-        KUBE_NAMESPACE = "ingress-nginx"
-        // Define your Kubernetes deployment name
-        DEPLOYMENT_NAME = "candidate-api"
-        // Define your Docker Hub credentials ID (stored in Jenkins)
-        DOCKER_HUB_CREDENTIALS_ID = "docker-hub"
-        // Define your Kubernetes Service Account token credentials ID (stored in Jenkins)
-        K8S_SERVICE_ACCOUNT_CREDENTIALS_ID = "k8s-service-account-token"
+        DOCKER_TAG = "latest"
+        DOCKER_CREDS = credentials('"docker-hub"')
     }
 
     stages {
-        stage('Checkout Code') {
+        stage('Checkout GitHub Repository') {
             steps {
-                // Checkout your repository (if needed)
                 git branch: 'master', url: 'https://github.com/sandycis1988/Dstaquad-Candidate.git'
             }
         }
 
-        stage('Login to Docker Hub') {
+        stage('Build Docker Image') {
             steps {
                 script {
-                    // Authenticate with Docker Hub
-                    withCredentials([usernamePassword(credentialsId: DOCKER_HUB_CREDENTIALS_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                        sh """
-                            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        """
-                    }
+                    docker.build("${DOCKER_IMAGE}:${DOCKER_TAG}")
                 }
             }
         }
 
-        stage('Pull Latest Docker Image') {
+        stage('Push Docker Image to Docker Hub') {
             steps {
                 script {
-                    // Pull the latest image from Docker Hub
-                    sh """
-                        docker pull ${DOCKER_IMAGE}:latest
-                    """
+                    docker.withRegistry('https://registry.hub.docker.com', 'dockerhub-credentials') {
+                        docker.image("${DOCKER_IMAGE}:${DOCKER_TAG}").push()
+                    }
                 }
             }
         }
@@ -49,53 +35,21 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    // Use the Kubernetes Service Account token for authentication
-                    withCredentials([string(credentialsId: K8S_SERVICE_ACCOUNT_CREDENTIALS_ID, variable: 'K8S_TOKEN')]) {
-                        sh """
-                            # Set up kubectl with the Service Account token
-                            kubectl config set-credentials jenkins --token=${K8S_TOKEN}
-                            kubectl config set-cluster my-cluster --server=https://<your-cluster-api-server> --insecure-skip-tls-verify=true
-                            kubectl config set-context jenkins-context --cluster=my-cluster --user=jenkins
-                            kubectl config use-context jenkins-context
-
-                            # Apply the Kubernetes deployment YAML
-                            cat <<EOF | kubectl apply -f -
-                            apiVersion: apps/v1
-                            kind: Deployment
-                            metadata:
-                              name: ${DEPLOYMENT_NAME}
-                              namespace: ${KUBE_NAMESPACE}
-                            spec:
-                              replicas: 1
-                              selector:
-                                matchLabels:
-                                  app: ${DEPLOYMENT_NAME}
-                              template:
-                                metadata:
-                                  labels:
-                                    app: ${DEPLOYMENT_NAME}
-                                spec:
-                                  containers:
-                                  - name: ${DEPLOYMENT_NAME}
-                                    image: ${DOCKER_IMAGE}:latest
-                                    ports:
-                                    - containerPort: 80
-                            EOF
-                        """
-                    }
+                    // Apply the Kubernetes manifest
+                    sh """
+                        kubectl apply -f deployment.yaml
+                    """
                 }
             }
         }
-
-
     }
 
     post {
         success {
-            echo "Deployment successful!"
+            echo "Pipeline completed successfully!"
         }
         failure {
-            echo "Deployment failed. Check logs for more details."
+            echo "Pipeline failed!"
         }
     }
 }
