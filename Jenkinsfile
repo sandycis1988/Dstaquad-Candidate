@@ -1,68 +1,66 @@
 pipeline {
     agent any
-
     environment {
-        DOCKER_IMAGE = "sandycis476/candidate"
-        DOCKER_TAG = "latest"
-        DOCKER_CREDS = credentials('docker-hub')
-        KUBECONFIG = credentials('k8s-service-account-token')
-        DOCKER_CONFIG = "${WORKSPACE}/.docker" // Custom Docker config directory
+        DOCKER_REGISTRY = "docker.io"
+        DUBERHUB_REPO = sandycis476"
+        IMAGE_NAME = "candidate"
+        KUBE_NAMESPACE = "ingress-nginx"
+        DOCKER_CREDENTIALS_ID = "docker-hub"
+        KUBECONFIG_CREDENTIALS_ID = "k8s-service-account-token"
     }
-
     stages {
-        stage('Prepare Docker Config') {
+        stage('Checkout Code') {
             steps {
-                script {
-                    // Create a custom Docker config directory
-                    sh """
-                        mkdir -p ${DOCKER_CONFIG}
-                        echo '{}' > ${DOCKER_CONFIG}/config.json
-                    """
-                }
+                git branch: 'master', 
+                url: 'https://github.com/sandycis1988/Dstaquad-Candidate.git'
             }
         }
-
-        stage('Checkout GitHub Repository') {
-            steps {
-                git branch: 'master', url: 'https://github.com/sandycis1988/Dstaquad-Candidate.git'
-            }
-        }
-
+        
         stage('Build Docker Image') {
             steps {
                 script {
-                    docker.build("${DOCKER_IMAGE}:${DOCKER_TAG}")
+                    dockerImage = docker.build("${DUBERHUB_REPO}/${IMAGE_NAME}:${env.BUILD_ID}")
                 }
             }
         }
-
-        stage('Push Docker Image to Docker Hub') {
+        
+        stage('Run Tests') {
+            steps {
+                sh 'docker run ${DUBERHUB_REPO}/${IMAGE_NAME}:${env.BUILD_ID} npm test'
+            }
+        }
+        
+        stage('Push to Docker Hub') {
             steps {
                 script {
-                    docker.withRegistry('https://registry.hub.docker.com', 'docker-hub') {
-                        docker.image("${DOCKER_IMAGE}:${DOCKER_TAG}").push()
+                    docker.withRegistry("https://${DOCKER_REGISTRY}", DOCKER_CREDENTIALS_ID) {
+                        dockerImage.push()
+                        dockerImage.push('latest')
                     }
                 }
             }
         }
-
-        stage('Deploy to Kubernetes') {
+        
+        stage('Update K8s Manifests') {
             steps {
                 script {
                     sh """
-                        kubectl apply -f deployment.yaml
+                        sed -i 's|image:.*|image: ${DUBERHUB_REPO}/${IMAGE_NAME}:${env.BUILD_ID}|g' k8s/deployment.yaml
                     """
                 }
             }
         }
-    }
-
-    post {
-        success {
-            echo "Pipeline completed successfully!"
-        }
-        failure {
-            echo "Pipeline failed!"
+        
+        stage('Deploy to Kubernetes') {
+            steps {
+                withKubeConfig([credentialsId: KUBECONFIG_CREDENTIALS_ID]) {
+                    sh """
+                        kubectl apply -f k8s/deployment.yaml -n ${KUBE_NAMESPACE}
+                        kubectl apply -f k8s/service.yaml -n ${KUBE_NAMESPACE}
+                        kubectl rollout status deployment/${IMAGE_NAME} -n ${KUBE_NAMESPACE} --timeout=2m
+                    """
+                }
+            }
         }
     }
 }
