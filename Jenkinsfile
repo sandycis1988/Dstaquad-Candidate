@@ -9,7 +9,7 @@ pipeline {
         KUBECONFIG_CREDENTIALS_ID = "k8s-service-account-token"
         GOOGLE_CREDENTIALS = 'k8s-service-account-token' // Jenkins credentials ID for Google Cloud JSON key
         GCP_PROJECT = 'proud-outpost-447109-m8'
-        GKE_CLUSTER = 'k8s-dataquad-dev'
+        GKE_CLUSTER = ' k8s-dataquad-dev'
         GKE_ZONE = 'us-central1-c' // e.g., us-central1-a
     }
     stages {
@@ -36,7 +36,7 @@ pipeline {
                 script {
                     sh """
                     echo $DOCKERHUB_REPO/$IMAGE_NAME:$BUILD_ID
-                    docker login -u ${env.DOCKERHUB_REPO} -p ${env.DOCKER_CREDENTIALS_ID} 
+                    docker login -u ${env.DOCKERHUB_REPO} -p Appy@1988
                     docker push ${DOCKERHUB_REPO}/${IMAGE_NAME}:${BUILD_ID}
                     docker tag ${DOCKERHUB_REPO}/${IMAGE_NAME}:${BUILD_ID} ${DOCKERHUB_REPO}/${IMAGE_NAME}:latest
                     docker push ${DOCKERHUB_REPO}/${IMAGE_NAME}:latest
