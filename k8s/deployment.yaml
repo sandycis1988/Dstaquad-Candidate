@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: candidate-api
-        image: sandycis476/candidate:23
+        image: sandycis476/candidate:latest
         ports:
         - containerPort: 8085
 --- 
