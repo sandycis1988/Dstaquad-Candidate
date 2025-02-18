@@ -2,7 +2,7 @@ pipeline {
     agent any
     environment {
         DOCKER_REGISTRY = "docker.io"
-        DUBERHUB_REPO = sandycis476"
+        DUBERHUB_REPO = "sandycis476"
         IMAGE_NAME = "candidate"
         KUBE_NAMESPACE = "ingress-nginx"
         DOCKER_CREDENTIALS_ID = "docker-hub"
