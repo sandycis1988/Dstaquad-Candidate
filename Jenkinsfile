@@ -32,7 +32,7 @@ pipeline {
                 script {
                     sh """
                     echo $DOCKERHUB_REPO/$IMAGE_NAME:$BUILD_ID
-                    docker login -u ${env.DOCKERHUB_REPO} -p ${env.DOCKER_CREDENTIALS_ID} 
+                    docker login -u ${env.DOCKERHUB_REPO} -p Appy@1988
                     docker push ${DOCKERHUB_REPO}/${IMAGE_NAME}:${BUILD_ID}
                     docker tag ${DOCKERHUB_REPO}/${IMAGE_NAME}:${BUILD_ID} ${DOCKERHUB_REPO}/${IMAGE_NAME}:latest
                     docker push ${DOCKERHUB_REPO}/${IMAGE_NAME}:latest
