@@ -68,7 +68,7 @@ pipeline {
                 }
             }
         }
-        
+    }
         stage('Deploy to Kubernetes') {
             steps {
                 withKubeConfig([credentialsId: KUBECONFIG_CREDENTIALS_ID]) {
