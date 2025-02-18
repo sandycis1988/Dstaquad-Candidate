@@ -54,16 +54,45 @@ pipeline {
                 }
             }
         }
-        stage('Deploy to Kubernetes') {
+
+         stage('Authenticate with GCP') {
             steps {
-                withKubeConfig([credentialsId: KUBECONFIG_CREDENTIALS_ID]) {
+                script {
+                    withCredentials([file(credentialsId: "${env.GOOGLE_CREDENTIALS}", variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                        sh """
+                        gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
+                        gcloud config set project ${env.GCP_PROJECT}
+                        """
+                    }
+                }
+            }
+        } 
+        stage('Configure kubectl') {
+            steps {
+                script {
                     sh """
-                        kubectl apply -f k8s/deployment.yaml -n ${KUBE_NAMESPACE}
-                        kubectl apply -f k8s/service.yaml -n ${KUBE_NAMESPACE}
-                        kubectl rollout status deployment/${IMAGE_NAME} -n ${KUBE_NAMESPACE} --timeout=2m
+                    gcloud container clusters get-credentials ${env.GKE_CLUSTER} --zone ${env.GKE_ZONE} --project ${env.GCP_PROJECT}
                     """
                 }
             }
         }
+        stage('Apply Kubernetes Manifest') {
+            steps {
+                sh """
+                kubectl apply -f k8s/deployment.yaml -n ingress-nginx
+                """
+            }
+        }
+        // stage('Deploy to Kubernetes') {
+        //     steps {
+        //         withKubeConfig([credentialsId: KUBECONFIG_CREDENTIALS_ID]) {
+        //             sh """
+        //                 kubectl apply -f k8s/deployment.yaml -n ${KUBE_NAMESPACE}
+        //                 kubectl apply -f k8s/service.yaml -n ${KUBE_NAMESPACE}
+        //                 kubectl rollout status deployment/${IMAGE_NAME} -n ${KUBE_NAMESPACE} --timeout=2m
+        //             """
+        //         }
+        //     }
+        // }
     }
 }
