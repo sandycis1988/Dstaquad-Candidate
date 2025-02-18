@@ -7,9 +7,9 @@ pipeline {
         KUBE_NAMESPACE = "ingress-nginx"
         DOCKER_CREDENTIALS_ID = "docker-hub"
         KUBECONFIG_CREDENTIALS_ID = "k8s-service-account-token"
-        GOOGLE_CREDENTIALS = 'k8s-service-account-token' // Jenkins credentials ID for Google Cloud JSON key
+        GOOGLE_CREDENTIALS = 'gcloud-credentials-id' // Jenkins credentials ID for Google Cloud JSON key
         GCP_PROJECT = 'proud-outpost-447109-m8'
-        GKE_CLUSTER = ' k8s-dataquad-dev'
+        GKE_CLUSTER = 'k8s-dataquad-dev'
         GKE_ZONE = 'us-central1-c' // e.g., us-central1-a
     }
     stages {
