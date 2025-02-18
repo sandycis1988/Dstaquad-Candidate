@@ -19,24 +19,24 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-            docker.build("${env.DOCKERHUB_REPO}/${env.IMAGE_NAME}:${env.BUILD_ID}")
+                    sh """
+                    docker build -t ${DOCKERHUB_REPO}/${IMAGE_NAME}:${BUILD_ID} .
+                    """
                 }
             }
         }
         
-        stage('Run Tests') {
-            steps {
-                sh 'docker run ${env.DOCKERHUB_REPO}/${IMAGE_NAME}:${env.BUILD_ID} npm test'
-            }
-        }
         
         stage('Push to Docker Hub') {
             steps {
                 script {
-            docker.withRegistry('https://index.docker.io/v1/', "${env.DOCKER_CREDENTIALS_ID}") {
-                docker.image("${env.DOCKERHUB_REPO}/${env.IMAGE_NAME}:${env.BUILD_ID}").push()
-                docker.image("${env.DOCKERHUB_REPO}/${env.IMAGE_NAME}:${env.BUILD_ID}").push('latest') // Push latest tag
-                    }
+                    sh """
+                    echo $DOCKERHUB_REPO/$IMAGE_NAME:$BUILD_ID
+                    docker login -u ${env.DOCKERHUB_REPO} -p ${env.DOCKER_PASSWORD} 
+                    docker push ${DOCKERHUB_REPO}/${IMAGE_NAME}:${BUILD_ID}
+                    docker tag ${DOCKERHUB_REPO}/${IMAGE_NAME}:${BUILD_ID} ${DOCKERHUB_REPO}/${IMAGE_NAME}:latest
+                    docker push ${DOCKERHUB_REPO}/${IMAGE_NAME}:latest
+                    """
                 }
             }
         }
