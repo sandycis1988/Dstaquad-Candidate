@@ -2,6 +2,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: candidate-api
+  apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: candidate-api
+  namespace: ingress-nginx
 spec:
   replicas: 1
   selector:
@@ -30,4 +35,3 @@ spec:
     port: 8085         # Port exposed to the Ingress
     targetPort: 8085 # Port in the application pod
   type: ClusterIP
-
