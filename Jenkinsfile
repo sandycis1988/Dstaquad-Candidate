@@ -54,21 +54,6 @@ pipeline {
                 }
             }
         }
-
-    stages {
-        stage('Authenticate with GCP') {
-            steps {
-                script {
-                    withCredentials([file(credentialsId: "${env.GOOGLE_CREDENTIALS}", variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
-                        sh """
-                        gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
-                        gcloud config set project ${env.GCP_PROJECT}
-                        """
-                    }
-                }
-            }
-        }
-    }
         stage('Deploy to Kubernetes') {
             steps {
                 withKubeConfig([credentialsId: KUBECONFIG_CREDENTIALS_ID]) {
