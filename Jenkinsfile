@@ -19,23 +19,23 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    dockerImage = docker.build("${DOCKERHUB_REPO}/${IMAGE_NAME}:${env.BUILD_ID}")
+            docker.build("${env.DOCKERHUB_REPO}/${env.IMAGE_NAME}:${env.BUILD_ID}")
                 }
             }
         }
         
         stage('Run Tests') {
             steps {
-                sh 'docker run ${DOCKERHUB_REPO}/${IMAGE_NAME}:${env.BUILD_ID} npm test'
+                sh 'docker run ${env.DOCKERHUB_REPO}/${IMAGE_NAME}:${env.BUILD_ID} npm test'
             }
         }
         
         stage('Push to Docker Hub') {
             steps {
                 script {
-                    docker.withRegistry("https://${DOCKER_REGISTRY}", DOCKER_CREDENTIALS_ID) {
-                        dockerImage.push()
-                        dockerImage.push('latest')
+            docker.withRegistry('https://index.docker.io/v1/', "${env.DOCKER_CREDENTIALS_ID}") {
+                docker.image("${env.DOCKERHUB_REPO}/${env.IMAGE_NAME}:${env.BUILD_ID}").push()
+                docker.image("${env.DOCKERHUB_REPO}/${env.IMAGE_NAME}:${env.BUILD_ID}").push('latest') // Push latest tag
                     }
                 }
             }
