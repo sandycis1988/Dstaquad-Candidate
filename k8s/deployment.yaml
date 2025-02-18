@@ -6,7 +6,6 @@ metadata:
 kind: Deployment
 metadata:
   name: candidate-api
-  namespace: ingress-nginx
 spec:
   replicas: 1
   selector:
