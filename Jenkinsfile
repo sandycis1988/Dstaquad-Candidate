@@ -83,16 +83,13 @@ pipeline {
                 """
             }
         }
-        // stage('Deploy to Kubernetes') {
-        //     steps {
-        //         withKubeConfig([credentialsId: KUBECONFIG_CREDENTIALS_ID]) {
-        //             sh """
-        //                 kubectl apply -f k8s/deployment.yaml -n ${KUBE_NAMESPACE}
-        //                 kubectl apply -f k8s/service.yaml -n ${KUBE_NAMESPACE}
-        //                 kubectl rollout status deployment/${IMAGE_NAME} -n ${KUBE_NAMESPACE} --timeout=2m
-        //             """
-        //         }
-        //     }
-        // }
     }
+    post {
+        success {
+            echo 'Deployment succeeded!'
+        }
+        failure {
+            echo 'Deployment failed. Check the logs for details.'
+        }
+    }    
 }
