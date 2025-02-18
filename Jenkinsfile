@@ -7,6 +7,10 @@ pipeline {
         KUBE_NAMESPACE = "ingress-nginx"
         DOCKER_CREDENTIALS_ID = "docker-hub"
         KUBECONFIG_CREDENTIALS_ID = "k8s-service-account-token"
+        GOOGLE_CREDENTIALS = 'k8s-service-account-token' // Jenkins credentials ID for Google Cloud JSON key
+        GCP_PROJECT = 'proud-outpost-447109-m8'
+        GKE_CLUSTER = ' k8s-dataquad-dev'
+        GKE_ZONE = 'us-central1-c' // e.g., us-central1-a
     }
     stages {
         stage('Checkout Code') {
@@ -32,7 +36,7 @@ pipeline {
                 script {
                     sh """
                     echo $DOCKERHUB_REPO/$IMAGE_NAME:$BUILD_ID
-                    docker login -u ${env.DOCKERHUB_REPO} -p Appy@1988
+                    docker login -u ${env.DOCKERHUB_REPO} -p ${env.DOCKER_CREDENTIALS_ID} 
                     docker push ${DOCKERHUB_REPO}/${IMAGE_NAME}:${BUILD_ID}
                     docker tag ${DOCKERHUB_REPO}/${IMAGE_NAME}:${BUILD_ID} ${DOCKERHUB_REPO}/${IMAGE_NAME}:latest
                     docker push ${DOCKERHUB_REPO}/${IMAGE_NAME}:latest
@@ -50,12 +54,27 @@ pipeline {
                 }
             }
         }
+
+    stages {
+        stage('Authenticate with GCP') {
+            steps {
+                script {
+                    withCredentials([file(credentialsId: "${env.GOOGLE_CREDENTIALS}", variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                        sh """
+                        gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
+                        gcloud config set project ${env.GCP_PROJECT}
+                        """
+                    }
+                }
+            }
+        }
         
         stage('Deploy to Kubernetes') {
             steps {
                 withKubeConfig([credentialsId: KUBECONFIG_CREDENTIALS_ID]) {
                     sh """
                         kubectl apply -f k8s/deployment.yaml -n ${KUBE_NAMESPACE}
+                        kubectl apply -f k8s/service.yaml -n ${KUBE_NAMESPACE}
                         kubectl rollout status deployment/${IMAGE_NAME} -n ${KUBE_NAMESPACE} --timeout=2m
                     """
                 }
