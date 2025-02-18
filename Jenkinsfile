@@ -2,7 +2,7 @@ pipeline {
     agent any
     environment {
         DOCKER_REGISTRY = "docker.io"
-        DUBERHUB_REPO = "sandycis476"
+        DOCKERHUB_REPO = "sandycis476"
         IMAGE_NAME = "candidate"
         KUBE_NAMESPACE = "ingress-nginx"
         DOCKER_CREDENTIALS_ID = "docker-hub"
@@ -19,14 +19,14 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    dockerImage = docker.build("${DUBERHUB_REPO}/${IMAGE_NAME}:${env.BUILD_ID}")
+                    dockerImage = docker.build("${DOCKERHUB_REPO}/${IMAGE_NAME}:${env.BUILD_ID}")
                 }
             }
         }
         
         stage('Run Tests') {
             steps {
-                sh 'docker run ${DUBERHUB_REPO}/${IMAGE_NAME}:${env.BUILD_ID} npm test'
+                sh 'docker run ${DOCKERHUB_REPO}/${IMAGE_NAME}:${env.BUILD_ID} npm test'
             }
         }
         
@@ -45,7 +45,7 @@ pipeline {
             steps {
                 script {
                     sh """
-                        sed -i 's|image:.*|image: ${DUBERHUB_REPO}/${IMAGE_NAME}:${env.BUILD_ID}|g' k8s/deployment.yaml
+                        sed -i 's|image:.*|image: ${DOCKERHUB_REPO}/${IMAGE_NAME}:${env.BUILD_ID}|g' k8s/deployment.yaml
                     """
                 }
             }
